@@ -8,11 +8,10 @@
     "module": "ESNext",
     "moduleResolution": "Node",
     "newLine": "lf",
-    "noEmit": false,
+    "noEmit": true,
     "noFallthroughCasesInSwitch": true,
     "noImplicitThis": true,
     "noImplicitAny": true,
-    "outDir": "dist",
     "removeComments": true,
     "resolveJsonModule": true,
     "skipLibCheck": true,
@@ -21,5 +20,5 @@
     "strictNullChecks": true,
     "target": "ESNext"
   },
-  "include": ["src/**/*.ts"]
+  "include": ["./**/*.ts"]
 }

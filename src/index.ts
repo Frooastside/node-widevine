@@ -1,4 +1,4 @@
-import { Session } from "./license";
-import * as protocol from "./license_protocol";
+import { Session } from "./license.js";
+import * as protocol from "./license_protocol.js";
 
 export { Session, protocol };

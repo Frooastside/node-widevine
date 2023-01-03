@@ -1,5 +1,4 @@
 import crypto from "crypto";
-import { readFileSync } from "fs";
 import Long from "long";
 import { AES_CMAC } from "./cmac.js";
 import {
@@ -106,10 +105,10 @@ export class Session {
       cmac.calculate(Buffer.concat([Buffer.from("\x01"), authKeyBase])),
       cmac.calculate(Buffer.concat([Buffer.from("\x02"), authKeyBase]))
     ]);
-    const clientKey = Buffer.concat([
+    /*const clientKey = Buffer.concat([
       cmac.calculate(Buffer.concat([Buffer.from("\x03"), authKeyBase])),
       cmac.calculate(Buffer.concat([Buffer.from("\x04"), authKeyBase]))
-    ]);
+    ]);*/
 
     const calculatedSignature = crypto.createHmac("sha256", serverKey).update(signedLicense.msg).digest();
 
@@ -128,7 +127,6 @@ export class Session {
         kid: keyId,
         key: decryptedKey.toString("hex")
       };
-      console.log(`${keyContainer.type.toString()}, ${key.kid}:${key.key}`);
       return key;
     });
   }
