@@ -1,6 +1,34 @@
 # node-widevine
 
-### Examples
+- [Installation](#installation)
+- [Examples](#examples)
+- [Build it yourself](#build)
+
+## Installation
+
+I use pnpm and recommend in doing so too. If you don't want to modify the source code, it is fully compatible with every node package manager.
+
+Install the package via
+
+pnpm:
+
+```bash
+pnpm install node-widevine
+```
+
+npm:
+
+```bash
+npm install node-widevine
+```
+
+yarn:
+
+```bash
+yarn add node-widevine
+```
+
+## Examples
 
 Example using bitmovin demo
 
@@ -33,7 +61,9 @@ if (response.ok) {
 }
 ```
 
-### Build
+## Build
+
+I use pnpm and if you don't want to change anything in the package.json and in .husky/pre-commit, you have to install pnpm by using `npm -g install pnpm`
 
 #### Code
 
