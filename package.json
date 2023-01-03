@@ -1,31 +1,29 @@
 {
-  "name": "@wolkeneis/<<NAME>>",
+  "name": "widevine",
   "version": "0.1.0",
-  "private": true,
-  "description": "<<NAME>>",
+  "description": "Node Widevine",
   "keywords": [],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/wolkeneis/<<NAME>>.git"
+    "url": "git+https://github.com/frooastside/node-widevine.git"
   },
   "author": "Frooastside <frooastside@gmail.com>",
   "license": "GPL-3.0-or-later",
   "bugs": {
-    "url": "https://github.com/wolkeneis/<<NAME>>/issues"
+    "url": "https://github.com/frooastside/node-widevine/issues"
   },
-  "homepage": "https://<<NAME>>.wolkeneis.dev/",
+  "homepage": "https://github.com/frooastside/node-widevine/",
   "engines": {
     "node": "*",
     "vscode": "^1.22.0",
     "npm": "^8.x.x",
     "pnpm": "7.x.x"
   },
-  "main": "<<MAIN>>",
+  "main": "dist/index.js",
   "bin": {},
   "type": "module",
   "scripts": {
-    "start": "node -r source-map-support/register dist/index.js",
-    "watch": "nodemon -e ts -L -w src --exec \"pnpm build && pnpm start\"",
+    "proto:compile": "protoc --plugin=protoc-gen-ts_proto=.\\node_modules\\.bin\\protoc-gen-ts_proto.cmd --ts_proto_opt=\"esModuleInterop=true\" --ts_proto_opt=\"forceLong=long\" --ts_proto_opt=\"env=node\" --ts_proto_out=. src/*.proto",
     "lint": "eslint --ext ts .",
     "lint:fix": "eslint --fix --ext ts .",
     "pretty": "prettier --write .",
@@ -42,14 +40,17 @@
     "eslint-config-prettier": "^8.6.0",
     "husky": "^8.0.3",
     "lint-staged": "^13.1.0",
-    "nodemon": "^2.0.20",
     "prettier": "2.8.1",
+    "protoc": "^1.1.3",
     "rimraf": "^3.0.2",
     "ts-node": "^10.9.1",
+    "ts-proto": "^1.137.0",
     "typescript": "^4.9.4"
   },
   "dependencies": {
     "dotenv": "^16.0.3",
+    "long": "^5.2.1",
+    "protobufjs": "^7.1.2",
     "source-map-support": "^0.5.21",
     "uuid": "^9.0.0"
   },
