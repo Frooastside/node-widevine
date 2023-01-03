@@ -1,5 +1,5 @@
 {
-  "name": "widevine",
+  "name": "node-widevine",
   "version": "0.1.0",
   "description": "Node Widevine",
   "keywords": [],
