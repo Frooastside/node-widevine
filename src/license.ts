@@ -97,8 +97,18 @@ export class Session {
 
     const cmac = new AES_CMAC(Buffer.from(sessionKey));
 
-    const encKeyBase = Buffer.concat([Buffer.from("ENCRYPTION"), Buffer.from("\x00"), this._rawLicenseRequest, Buffer.from("\x00\x00\x00\x80")]);
-    const authKeyBase = Buffer.concat([Buffer.from("AUTHENTICATION"), Buffer.from("\x00"), this._rawLicenseRequest, Buffer.from("\x00\x00\x02\x00")]);
+    const encKeyBase = Buffer.concat([
+      Buffer.from("ENCRYPTION"),
+      Buffer.from("\x00", "ascii"),
+      this._rawLicenseRequest,
+      Buffer.from("\x00\x00\x00\x80", "ascii")
+    ]);
+    const authKeyBase = Buffer.concat([
+      Buffer.from("AUTHENTICATION"),
+      Buffer.from("\x00", "ascii"),
+      this._rawLicenseRequest,
+      Buffer.from("\x00\x00\x02\x00", "ascii")
+    ]);
 
     const encKey = cmac.calculate(Buffer.concat([Buffer.from("\x01"), encKeyBase]));
     const serverKey = Buffer.concat([
