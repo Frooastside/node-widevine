@@ -16,12 +16,12 @@ import {
 
 const WIDEVINE_SYSTEM_ID = new Uint8Array([237, 239, 139, 169, 121, 214, 74, 206, 163, 200, 39, 220, 213, 29, 33, 237]);
 
-export type Key = {
+export type KeyContainer = {
   kid: string;
   key: string;
 };
 
-export type CDM = {
+export type ContentDecryptionModule = {
   privateKey: Buffer;
   identifierBlob: Buffer;
 };
@@ -33,9 +33,9 @@ export class Session {
   private _pssh: Buffer;
   private _rawLicenseRequest?: Buffer;
 
-  constructor(cdm: CDM, pssh: Buffer) {
-    this._devicePrivateKey = crypto.createPrivateKey(cdm.privateKey);
-    this._identifierBlob = ClientIdentification.decode(cdm.identifierBlob);
+  constructor(contentDecryptionModule: ContentDecryptionModule, pssh: Buffer) {
+    this._devicePrivateKey = crypto.createPrivateKey(contentDecryptionModule.privateKey);
+    this._identifierBlob = ClientIdentification.decode(contentDecryptionModule.identifierBlob);
     this._identifier = this._generateIdentifier();
     this._pssh = pssh;
   }
@@ -133,7 +133,7 @@ export class Session {
       const decipher = crypto.createDecipheriv(`aes-${encKey.length * 8}-cbc`, encKey, keyContainer.iv);
       const decryptedKey = decipher.update(keyContainer.key);
       decipher.destroy();
-      const key: Key = {
+      const key: KeyContainer = {
         kid: keyId,
         key: decryptedKey.toString("hex")
       };
