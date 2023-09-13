@@ -17,7 +17,7 @@
     "node": "*",
     "vscode": "^1.22.0",
     "npm": "^8.x.x",
-    "pnpm": "7.x.x"
+    "pnpm": "8.x.x"
   },
   "main": "dist/index.js",
   "bin": {},
