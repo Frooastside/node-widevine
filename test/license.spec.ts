@@ -4,7 +4,7 @@ import { describe } from "mocha";
 import { LicenseType, SERVICE_CERTIFICATE_CHALLENGE, Session } from "../dist/index.js";
 import "dotenv/config";
 
-describe("Bitmovin License Tests", () => {
+describe("Generic License Tests", () => {
   it("Should return a list of keys", async () => {
     //read cdm files located in the same directory
     const privateKey = existsSync("./security/device_private_key")
@@ -21,12 +21,15 @@ describe("Bitmovin License Tests", () => {
     );
 
     //pssh found in the mpd manifest
+    ok(process.env.PSSH);
     const pssh = Buffer.from(
-      "AAAAW3Bzc2gAAAAA7e+LqXnWSs6jyCfc1R0h7QAAADsIARIQ62dqu8s0Xpa7z2FmMPGj2hoNd2lkZXZpbmVfdGVzdCIQZmtqM2xqYVNkZmFsa3IzaioCSEQyAA==",
+      process.env.PSSH,
       "base64"
     );
+
     //license url server
-    const licenseUrl = "https://cwip-shaka-proxy.appspot.com/no_auth";
+    ok(process.env.LICENSE_URL);
+    const licenseUrl = process.env.LICENSE_URL;
 
     const session = new Session({ privateKey, identifierBlob }, pssh);
 
