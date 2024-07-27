@@ -94,4 +94,4 @@ Warning: You need to replace the import statement `import _m0 from "protobufjs/m
 
 ## License Stuff
 
-This project is licensed under GPLv3-or-later because of `src/license_protocol.proto` from [@rlaphoenix/pywidevine 1.6.0](https://github.com/rlaphoenix/pywidevine). It's license is in `THIRDPARTY.md`.
+This project is licensed under GPLv3-or-later because of `proto/license_protocol.proto` from [@rlaphoenix/pywidevine 1.6.0](https://github.com/rlaphoenix/pywidevine). It's license is in `THIRDPARTY.md`.

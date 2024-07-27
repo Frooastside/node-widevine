@@ -1,4 +1,3 @@
-import Long from "long";
 import { AES_CMAC } from "./cmac.js";
 import forge from "node-forge";
 import {
@@ -7,15 +6,16 @@ import {
   EncryptedClientIdentification,
   License,
   LicenseRequest,
+  LicenseRequest_ContentIdentification,
+  LicenseRequest_ContentIdentification_WidevinePsshData,
   LicenseRequest_RequestType,
   LicenseType,
   ProtocolVersion,
   SignedDrmCertificate,
   SignedMessage,
   SignedMessage_MessageType,
-  SignedMessage_SessionKeyType,
   WidevinePsshData
-} from "./license_protocol.js";
+} from "./license_protocol_pb.js";
 
 const WIDEVINE_SYSTEM_ID = new Uint8Array([0xed, 0xef, 0x8b, 0xa9, 0x79, 0xd6, 0x4a, 0xce, 0xa3, 0xc8, 0x27, 0xdc, 0xd5, 0x1d, 0x21, 0xed]);
 
@@ -93,7 +93,7 @@ export class Session {
 
   constructor(contentDecryptionModule: ContentDecryptionModule, pssh: Buffer) {
     this._devicePrivateKey = forge.pki.privateKeyFromPem(contentDecryptionModule.privateKey.toString("binary"));
-    this._identifierBlob = ClientIdentification.decode(contentDecryptionModule.identifierBlob);
+    this._identifierBlob = ClientIdentification.fromBinary(contentDecryptionModule.identifierBlob);
     this._pssh = pssh;
   }
 
@@ -102,22 +102,22 @@ export class Session {
   }
 
   async setServiceCertificateFromMessage(rawSignedMessage: Buffer) {
-    const signedMessage: SignedMessage = SignedMessage.decode(rawSignedMessage);
+    const signedMessage: SignedMessage = SignedMessage.fromBinary(rawSignedMessage);
     if (!signedMessage.msg) {
       throw new Error("the service certificate message does not contain a message");
     }
-    await this.setServiceCertificate(signedMessage.msg);
+    await this.setServiceCertificate(Buffer.from(signedMessage.msg));
   }
 
   async setServiceCertificate(serviceCertificate: Buffer) {
-    const signedServiceCertificate: SignedDrmCertificate = SignedDrmCertificate.decode(serviceCertificate);
+    const signedServiceCertificate: SignedDrmCertificate = SignedDrmCertificate.fromBinary(serviceCertificate);
     if (!(await this._verifyServiceCertificate(signedServiceCertificate))) {
       throw new Error("Service certificate is not signed by the Widevine root certificate");
     }
     this._serviceCertificate = signedServiceCertificate;
   }
 
-  createLicenseRequest(licenseType: LicenseType = LicenseType.STREAMING): Buffer {
+  createLicenseRequest(licenseType: LicenseType = LicenseType.STREAMING, android: boolean = false): Buffer {
     if (!this._pssh.subarray(12, 28).equals(Buffer.from(WIDEVINE_SYSTEM_ID))) {
       throw new Error("the pssh is not an actuall pssh");
     }
@@ -127,22 +127,22 @@ export class Session {
       throw new Error("pssh is invalid");
     }
 
-    const licenseRequest: LicenseRequest = {
+    const licenseRequest: LicenseRequest = new LicenseRequest({
       type: LicenseRequest_RequestType.NEW,
-      clientId: undefined,
-      contentId: {
-        widevinePsshData: {
-          psshData: [this._pssh.subarray(32)],
-          licenseType: licenseType,
-          requestId: this._generateIdentifier()
+      contentId: new LicenseRequest_ContentIdentification({
+        contentIdVariant: {
+          case: "widevinePsshData",
+          value: new LicenseRequest_ContentIdentification_WidevinePsshData({
+            psshData: [this._pssh.subarray(32)],
+            licenseType: licenseType,
+            requestId: android ? this._generateAndroidIdentifier() : this._generateGenericIdentifier()
+          })
         }
-      },
-      requestTime: Long.fromNumber(Date.now()).divide(1000),
+      }),
+      requestTime: BigInt(Date.now()) / BigInt(1000),
       protocolVersion: ProtocolVersion.VERSION_2_1,
-      keyControlNonce: Math.floor(Math.random() * 2 ** 31),
-      keyControlNonceDeprecated: Buffer.alloc(0),
-      encryptedClientId: undefined
-    };
+      keyControlNonce: Math.floor(Math.random() * 2 ** 31)
+    });
 
     if (this._serviceCertificate) {
       const encryptedClientIdentification = this._encryptClientIdentification(this._identifierBlob, this._serviceCertificate);
@@ -151,26 +151,20 @@ export class Session {
       licenseRequest.clientId = this._identifierBlob;
     }
 
-    this._rawLicenseRequest = Buffer.from(LicenseRequest.encode(licenseRequest).finish());
+    this._rawLicenseRequest = Buffer.from(licenseRequest.toBinary());
 
     const pss: forge.pss.PSS = forge.pss.create({ md: forge.md.sha1.create(), mgf: forge.mgf.mgf1.create(forge.md.sha1.create()), saltLength: 20 });
     const md = forge.md.sha1.create();
     md.update(this._rawLicenseRequest.toString("binary"), "raw");
     const signature = Buffer.from(this._devicePrivateKey.sign(md, pss), "binary");
 
-    const signedLicenseRequest: SignedMessage = {
+    const signedLicenseRequest: SignedMessage = new SignedMessage({
       type: SignedMessage_MessageType.LICENSE_REQUEST,
       msg: this._rawLicenseRequest,
-      signature: signature,
-      sessionKey: Buffer.alloc(0),
-      remoteAttestation: Buffer.alloc(0),
-      metricData: [],
-      serviceVersionInfo: undefined,
-      sessionKeyType: SignedMessage_SessionKeyType.UNDEFINED,
-      oemcryptoCoreMessage: Buffer.alloc(0)
-    };
+      signature: signature
+    });
 
-    return Buffer.from(SignedMessage.encode(signedLicenseRequest).finish());
+    return Buffer.from(signedLicenseRequest.toBinary());
   }
 
   parseLicense(rawLicense: Buffer) {
@@ -178,7 +172,7 @@ export class Session {
       throw new Error("please request a license first");
     }
 
-    const signedLicense = SignedMessage.decode(rawLicense);
+    const signedLicense = SignedMessage.fromBinary(rawLicense);
     if (!signedLicense.sessionKey) {
       throw new Error("the license does not contain a session key");
     }
@@ -189,7 +183,9 @@ export class Session {
       throw new Error("the license does not contain a signature");
     }
 
-    const sessionKey = this._devicePrivateKey.decrypt(signedLicense.sessionKey.toString("binary"), "RSA-OAEP", { md: forge.md.sha1.create() });
+    const sessionKey = this._devicePrivateKey.decrypt(Buffer.from(signedLicense.sessionKey).toString("binary"), "RSA-OAEP", {
+      md: forge.md.sha1.create()
+    });
 
     const cmac = new AES_CMAC(Buffer.from(sessionKey, "binary"));
 
@@ -218,33 +214,34 @@ export class Session {
 
     const hmac = forge.hmac.create();
     hmac.start(forge.md.sha256.create(), serverKey.toString("binary"));
-    hmac.update(signedLicense.msg.toString("binary"));
+    hmac.update(Buffer.from(signedLicense.msg).toString("binary"));
     const calculatedSignature = Buffer.from(hmac.digest().data, "binary");
 
     if (!calculatedSignature.equals(signedLicense.signature)) {
       throw new Error("signatures do not match");
     }
 
-    const license = License.decode(signedLicense.msg);
+    const license = License.fromBinary(signedLicense.msg);
 
-    return license.key.map((keyContainer) => {
-      if (!keyContainer.id || !keyContainer.type || !keyContainer.key || !keyContainer.iv) {
-        throw new Error(
-          `the key container does not contain all required fields [id: ${!keyContainer.id}; type: ${!keyContainer.type}; key: ${!keyContainer.key}; iv: ${!keyContainer.iv}]`
-        );
+    const keyContainers = license.key.map((keyContainer) => {
+      if (keyContainer.id && keyContainer.type && keyContainer.key && keyContainer.iv) {
+        const keyId = keyContainer.id.length ? Buffer.from(keyContainer.id).toString("hex") : keyContainer.type.toString();
+        const decipher = forge.cipher.createDecipher("AES-CBC", encKey.toString("binary"));
+        decipher.start({ iv: Buffer.from(keyContainer.iv).toString("binary") });
+        decipher.update(forge.util.createBuffer(keyContainer.key));
+        decipher.finish();
+        const decryptedKey = Buffer.from(decipher.output.data, "binary");
+        const key: KeyContainer = {
+          kid: keyId,
+          key: decryptedKey.toString("hex")
+        };
+        return key;
       }
-      const keyId = keyContainer.id.length ? keyContainer.id.toString("hex") : keyContainer.type.toString();
-      const decipher = forge.cipher.createDecipher("AES-CBC", encKey.toString("binary"));
-      decipher.start({ iv: keyContainer.iv.toString("binary") });
-      decipher.update(forge.util.createBuffer(keyContainer.key));
-      decipher.finish();
-      const decryptedKey = Buffer.from(decipher.output.data, "binary");
-      const key: KeyContainer = {
-        kid: keyId,
-        key: decryptedKey.toString("hex")
-      };
-      return key;
     });
+    if (keyContainers.filter((container) => !!container).length < 1) {
+      throw new Error("there was not a single valid key in the response");
+    }
+    return keyContainers;
   }
 
   private _encryptClientIdentification(
@@ -255,7 +252,7 @@ export class Session {
       throw new Error("the service certificate does not contain an actual certificate");
     }
 
-    const serviceCertificate = DrmCertificate.decode(signedServiceCertificate.drmCertificate);
+    const serviceCertificate = DrmCertificate.fromBinary(signedServiceCertificate.drmCertificate);
     if (!serviceCertificate.publicKey) {
       throw new Error("the service certificate does not contain a public key");
     }
@@ -264,20 +261,20 @@ export class Session {
     const iv = forge.random.getBytesSync(16);
     const cipher = forge.cipher.createCipher("AES-CBC", key);
     cipher.start({ iv: iv });
-    cipher.update(forge.util.createBuffer(ClientIdentification.encode(clientIdentification).finish()));
+    cipher.update(forge.util.createBuffer(clientIdentification.toBinary()));
     cipher.finish();
     const rawEncryptedClientIdentification = Buffer.from(cipher.output.data, "binary");
 
-    const publicKey = forge.pki.publicKeyFromAsn1(forge.asn1.fromDer(serviceCertificate.publicKey.toString("binary")));
+    const publicKey = forge.pki.publicKeyFromAsn1(forge.asn1.fromDer(Buffer.from(serviceCertificate.publicKey).toString("binary")));
     const encryptedKey = publicKey.encrypt(key, "RSA-OAEP", { md: forge.md.sha1.create() });
 
-    const encryptedClientIdentification: EncryptedClientIdentification = {
+    const encryptedClientIdentification: EncryptedClientIdentification = new EncryptedClientIdentification({
       encryptedClientId: rawEncryptedClientIdentification,
       encryptedClientIdIv: Buffer.from(iv, "binary"),
       encryptedPrivacyKey: Buffer.from(encryptedKey, "binary"),
       providerId: serviceCertificate.providerId,
       serviceCertificateSerialNumber: serviceCertificate.serialNumber
-    };
+    });
     return encryptedClientIdentification;
   }
 
@@ -292,20 +289,24 @@ export class Session {
     const publicKey = forge.pki.publicKeyFromAsn1(forge.asn1.fromDer(Buffer.from(WIDEVINE_ROOT_PUBLIC_KEY).toString("binary")));
     const pss: forge.pss.PSS = forge.pss.create({ md: forge.md.sha1.create(), mgf: forge.mgf.mgf1.create(forge.md.sha1.create()), saltLength: 20 });
     const sha1 = forge.md.sha1.create();
-    sha1.update(signedServiceCertificate.drmCertificate.toString("binary"), "raw");
-    return publicKey.verify(sha1.digest().bytes(), signedServiceCertificate.signature.toString("binary"), pss);
+    sha1.update(Buffer.from(signedServiceCertificate.drmCertificate).toString("binary"), "raw");
+    return publicKey.verify(sha1.digest().bytes(), Buffer.from(signedServiceCertificate.signature).toString("binary"), pss);
   }
 
   private _parsePSSH(pssh: Buffer): WidevinePsshData | null {
     try {
-      return WidevinePsshData.decode(pssh.subarray(32));
+      return WidevinePsshData.fromBinary(pssh.subarray(32));
     } catch {
       return null;
     }
   }
 
-  private _generateIdentifier(): Buffer {
+  private _generateAndroidIdentifier(): Buffer {
     return Buffer.from(`${forge.util.bytesToHex(forge.random.getBytesSync(8))}${"01"}${"00000000000000"}`);
+  }
+
+  private _generateGenericIdentifier(): Buffer {
+    return Buffer.from(forge.random.getBytesSync(16), "binary");
   }
 
   get pssh(): Buffer {

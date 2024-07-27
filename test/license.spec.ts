@@ -49,5 +49,5 @@ describe("Bitmovin License Tests", () => {
       const successful = session.parseLicense(Buffer.from(await response.arrayBuffer())).length > 0;
       ok(successful, "Received a valid response");
     }
-  });
-});
+  }).timeout(10000);
+}).timeout(10000);
