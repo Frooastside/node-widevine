@@ -42,7 +42,7 @@ yarn add node-widevine
 Example using bitmovin demo
 
 ```typescript
-import { Session } from "widevine";
+import { LicenseType, SERVICE_CERTIFICATE_CHALLENGE, Session } from "widevine";
 import { readFileSync } from "fs";
 
 //read cdm files located in the same directory
@@ -59,9 +59,17 @@ const licenseUrl = "https://cwip-shaka-proxy.appspot.com/no_auth";
 
 const session = new Session({ privateKey, identifierBlob }, pssh);
 
+const serviceCertificateResponse = await fetch(licenseUrl, {
+  method: "POST",
+  body: Buffer.from(SERVICE_CERTIFICATE_CHALLENGE)
+});
+
+const serviceCertificate = Buffer.from(await serviceCertificateResponse.arrayBuffer());
+await session.setServiceCertificateFromMessage(serviceCertificate);
+
 const response = await fetch(licenseUrl, {
   method: "POST",
-  body: session.createLicenseRequest()
+  body: session.createLicenseRequest(LicenseType.STREAMING)
 });
 
 if (response.ok) {
@@ -72,7 +80,7 @@ if (response.ok) {
 
 ## Build
 
-I use pnpm and if you don't want to change anything in the package.json and in .husky/pre-commit, you have to install pnpm by using `npm -g install pnpm`
+I use pnpm and if you don't want to change anything in the package.json, you have to install pnpm by using `npm -g install pnpm`
 
 #### Code
 
@@ -83,3 +91,7 @@ Just run `pnpm build` to generate the js, map and type definition files from the
 If you want to compile the license_protocol.ts file yourself, you need to run `pnpm proto:compile`
 
 Warning: You need to replace the import statement `import _m0 from "protobufjs/minimal";` in the license_protocol.ts file with `import _m0 from "protobufjs/minimal.js";` (add the .js extension) or else it will throw an error.
+
+## License Stuff
+
+This project is licensed under GPLv3-or-later because of `src/license_protocol.proto` from [@rlaphoenix/pywidevine 1.6.0](https://github.com/rlaphoenix/pywidevine). It's license is in `THIRDPARTY.md`.

@@ -1,20 +1,17 @@
-import { equal, ok } from "assert";
-import { config } from "dotenv";
+import { ok } from "assert";
 import { existsSync, readFileSync } from "fs";
 import { describe } from "mocha";
-import fetch from "node-fetch";
-import { Session } from "../dist/index.js";
-
-config();
+import { LicenseType, SERVICE_CERTIFICATE_CHALLENGE, Session } from "../dist/index.js";
+import "dotenv/config";
 
 describe("Bitmovin License Tests", () => {
   it("Should return a list of keys", async () => {
     //read cdm files located in the same directory
-    const privateKey = existsSync("./device_private_key")
-      ? readFileSync("./device_private_key")
+    const privateKey = existsSync("./security/device_private_key")
+      ? readFileSync("./security/device_private_key")
       : Buffer.from(process.env.DEVICE_PRIVATE_KEY_BASE64 ?? "", "base64");
-    const identifierBlob = existsSync("./device_client_id_blob")
-      ? readFileSync("./device_client_id_blob")
+    const identifierBlob = existsSync("./security/device_client_id_blob")
+      ? readFileSync("./security/device_client_id_blob")
       : Buffer.from(process.env.DEVICE_CLIENT_ID_BLOB_BASE64 ?? "", "base64");
 
     ok(privateKey.length > 0, "Private key file should be in the security folder or set using the environment variable 'DEVICE_PRIVATE_KEY_BASE64'");
@@ -33,9 +30,17 @@ describe("Bitmovin License Tests", () => {
 
     const session = new Session({ privateKey, identifierBlob }, pssh);
 
+    const serviceCertificateResponse = await fetch(licenseUrl, {
+      method: "POST",
+      body: Buffer.from(SERVICE_CERTIFICATE_CHALLENGE)
+    });
+
+    const serviceCertificate = Buffer.from(await serviceCertificateResponse.arrayBuffer());
+    await session.setServiceCertificateFromMessage(serviceCertificate);
+
     const response = await fetch(licenseUrl, {
       method: "POST",
-      body: session.createLicenseRequest()
+      body: session.createLicenseRequest(LicenseType.STREAMING)
     });
 
     ok(response.ok);
