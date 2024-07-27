@@ -22,10 +22,7 @@ describe("Generic License Tests", () => {
 
     //pssh found in the mpd manifest
     ok(process.env.PSSH);
-    const pssh = Buffer.from(
-      process.env.PSSH,
-      "base64"
-    );
+    const pssh = Buffer.from(process.env.PSSH, "base64");
 
     //license url server
     ok(process.env.LICENSE_URL);

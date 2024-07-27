@@ -224,8 +224,8 @@ export class Session {
     const license = License.fromBinary(signedLicense.msg);
 
     const keyContainers = license.key.map((keyContainer) => {
-      if (keyContainer.id && keyContainer.type && keyContainer.key && keyContainer.iv) {
-        const keyId = keyContainer.id.length ? Buffer.from(keyContainer.id).toString("hex") : keyContainer.type.toString();
+      if (keyContainer.type && keyContainer.key && keyContainer.iv) {
+        const keyId = keyContainer.id ? Buffer.from(keyContainer.id).toString("hex") : "00000000000000000000000000000000";
         const decipher = forge.cipher.createDecipher("AES-CBC", encKey.toString("binary"));
         decipher.start({ iv: Buffer.from(keyContainer.iv).toString("binary") });
         decipher.update(forge.util.createBuffer(keyContainer.key));
