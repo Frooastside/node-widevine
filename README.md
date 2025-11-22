@@ -1,5 +1,15 @@
 # node-widevine
 
+A lightweight NodeJS library for working with **Google Widevine**
+
+- Loading and initializing Widevine device credentials (device_client_id_blob + device_private_key)
+- Creating Widevine license acquisition challenges (SignedMessage / LicenseRequest)
+- Parsing and decrypting Widevine license responses (License / KeyContainer)
+- Handling service certificates and encrypted client identification
+- Managing Widevine sessions for streaming or offline license types
+
+---
+
 - [Disclaimer](#disclaimer)
 - [Installation](#installation)
 - [Examples](#examples)
@@ -15,26 +25,28 @@
 
 ## Installation
 
-I use pnpm and recommend in doing so too. If you don't want to modify the source code, it is fully compatible with every node package manager.
+npm:
 
-Install the package via
+```bash
+npm install widevine
+```
 
 pnpm:
 
 ```bash
-pnpm install node-widevine
+pnpm install widevine
 ```
 
-npm:
+bun:
 
-```bash
-npm install node-widevine
+```bun
+bun add widevine
 ```
 
 yarn:
 
 ```bash
-yarn add node-widevine
+yarn add widevine
 ```
 
 ## Examples
@@ -42,60 +54,63 @@ yarn add node-widevine
 Example using bitmovin demo
 
 ```typescript
-import { LicenseType, SERVICE_CERTIFICATE_CHALLENGE, Session } from 'widevine'
 import { readFileSync } from 'fs'
+import { Widevine, LicenseType } from 'widevine'
 
-//read cdm files located in the same directory
-const privateKey = readFileSync('./device_private_key')
+// Read cdm files
 const identifierBlob = readFileSync('./device_client_id_blob')
+const privateKey = readFileSync('./device_private_key')
 
-//pssh found in the mpd manifest
+// Initialize Widevine client
+const device = Widevine.init(identifierBlob, privateKey)
+
+// PSSH found in the MPD manifest
 const pssh = Buffer.from(
     'AAAAW3Bzc2gAAAAA7e+LqXnWSs6jyCfc1R0h7QAAADsIARIQ62dqu8s0Xpa7z2FmMPGj2hoNd2lkZXZpbmVfdGVzdCIQZmtqM2xqYVNkZmFsa3IzaioCSEQyAA==',
     'base64'
 )
-//license url server
+
+// Generate Session
+const session = device.createSession(pssh, LicenseType.STREAMING)
+
+// License Server URL
 const licenseUrl = 'https://cwip-shaka-proxy.appspot.com/no_auth'
 
-const session = new Session({ privateKey, identifierBlob }, pssh)
-
+// Service Certificate Request
 const serviceCertificateResponse = await fetch(licenseUrl, {
     method: 'POST',
-    body: Buffer.from(SERVICE_CERTIFICATE_CHALLENGE)
+    body: Buffer.from(session.getServiceCertificateChallenge())
 })
 
 const serviceCertificate = Buffer.from(
     await serviceCertificateResponse.arrayBuffer()
 )
-await session.setServiceCertificateFromMessage(serviceCertificate)
 
+// Set Service Certificate
+session.setServiceCertificateFromMessage(serviceCertificate)
+
+// License Request
 const response = await fetch(licenseUrl, {
     method: 'POST',
-    body: session.createLicenseRequest(LicenseType.STREAMING)
+    body: session.generateChallenge()
 })
 
+// Check if request was successful
 if (response.ok) {
-    const successful =
-        session.parseLicense(Buffer.from(await response.arrayBuffer())).length >
-        0
-    console.log(`successful? ${successful ? 'yes' : 'no'}`)
+  // Parse license
+  const successful = session.parseLicense(Buffer.from(await response.arrayBuffer())).length > 0
+  console.log(`successful? ${successful ? 'yes' : 'no'}`)
+} else {
+  console.error('Request failed!')
+  console.log(await response.text())
 }
 ```
 
 ## Build
-
-I use pnpm and if you don't want to change anything in the package.json, you have to install pnpm by using `npm -g install pnpm`
-
 #### Code
 
-Just run `pnpm build` to generate the js, map and type definition files from the Typescript source.
+Just run `bun run build` to generate the js, map and type definition files from the Typescript source.
 
 #### Protocol Buffers
 
-If you want to compile the license_protocol.ts file yourself, you need to run `pnpm proto:compile`
-
-Warning: You need to replace the import statement `import _m0 from "protobufjs/minimal";` in the license_protocol.ts file with `import _m0 from "protobufjs/minimal.js";` (add the .js extension) or else it will throw an error.
-
-## License Stuff
-
-This project is licensed under GPLv3-or-later because of `proto/license_protocol.proto` from [@rlaphoenix/pywidevine 1.6.0](https://github.com/rlaphoenix/pywidevine). It's license is in `THIRDPARTY.md`.
+If you want to compile the license_protocol_pb.ts file yourself, you need to run `bun run proto:compile`
