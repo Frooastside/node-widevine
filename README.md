@@ -55,7 +55,7 @@ Example using bitmovin demo
 
 ```typescript
 import { readFileSync } from 'fs'
-import { Widevine, LicenseType } from 'widevine'
+import Widevine, { LicenseType } from 'widevine'
 
 // Read cdm files
 const identifierBlob = readFileSync('./device_client_id_blob')

@@ -2,7 +2,9 @@
     "name": "widevine",
     "version": "1.0.0",
     "description": "NodeJS Widevine Client",
-    "keywords": [],
+    "keywords": [
+        "widevine"
+    ],
     "repository": {
         "type": "git",
         "url": "git://github.com/frooastside/node-widevine.git"

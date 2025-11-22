@@ -9,7 +9,7 @@ import { fromBinary } from '@bufbuild/protobuf'
 import * as protocol from './license_protocol_pb'
 import Session from './session'
 
-export class Widevine {
+export default class Widevine {
     private identifierBlob: protocol.ClientIdentification
     private devicePrivateKey: forge.pki.rsa.PrivateKey
 
