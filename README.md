@@ -42,39 +42,43 @@ yarn add node-widevine
 Example using bitmovin demo
 
 ```typescript
-import { LicenseType, SERVICE_CERTIFICATE_CHALLENGE, Session } from "widevine";
-import { readFileSync } from "fs";
+import { LicenseType, SERVICE_CERTIFICATE_CHALLENGE, Session } from 'widevine'
+import { readFileSync } from 'fs'
 
 //read cdm files located in the same directory
-const privateKey = readFileSync("./device_private_key");
-const identifierBlob = readFileSync("./device_client_id_blob");
+const privateKey = readFileSync('./device_private_key')
+const identifierBlob = readFileSync('./device_client_id_blob')
 
 //pssh found in the mpd manifest
 const pssh = Buffer.from(
-  "AAAAW3Bzc2gAAAAA7e+LqXnWSs6jyCfc1R0h7QAAADsIARIQ62dqu8s0Xpa7z2FmMPGj2hoNd2lkZXZpbmVfdGVzdCIQZmtqM2xqYVNkZmFsa3IzaioCSEQyAA==",
-  "base64"
-);
+    'AAAAW3Bzc2gAAAAA7e+LqXnWSs6jyCfc1R0h7QAAADsIARIQ62dqu8s0Xpa7z2FmMPGj2hoNd2lkZXZpbmVfdGVzdCIQZmtqM2xqYVNkZmFsa3IzaioCSEQyAA==',
+    'base64'
+)
 //license url server
-const licenseUrl = "https://cwip-shaka-proxy.appspot.com/no_auth";
+const licenseUrl = 'https://cwip-shaka-proxy.appspot.com/no_auth'
 
-const session = new Session({ privateKey, identifierBlob }, pssh);
+const session = new Session({ privateKey, identifierBlob }, pssh)
 
 const serviceCertificateResponse = await fetch(licenseUrl, {
-  method: "POST",
-  body: Buffer.from(SERVICE_CERTIFICATE_CHALLENGE)
-});
+    method: 'POST',
+    body: Buffer.from(SERVICE_CERTIFICATE_CHALLENGE)
+})
 
-const serviceCertificate = Buffer.from(await serviceCertificateResponse.arrayBuffer());
-await session.setServiceCertificateFromMessage(serviceCertificate);
+const serviceCertificate = Buffer.from(
+    await serviceCertificateResponse.arrayBuffer()
+)
+await session.setServiceCertificateFromMessage(serviceCertificate)
 
 const response = await fetch(licenseUrl, {
-  method: "POST",
-  body: session.createLicenseRequest(LicenseType.STREAMING)
-});
+    method: 'POST',
+    body: session.createLicenseRequest(LicenseType.STREAMING)
+})
 
 if (response.ok) {
-  const successful = session.parseLicense(Buffer.from(await response.arrayBuffer())).length > 0;
-  console.log(`successful? ${successful ? "yes" : "no"}`);
+    const successful =
+        session.parseLicense(Buffer.from(await response.arrayBuffer())).length >
+        0
+    console.log(`successful? ${successful ? 'yes' : 'no'}`)
 }
 ```
 

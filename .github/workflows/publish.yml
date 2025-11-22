@@ -1,0 +1,29 @@
+name: Publish Package
+
+on:
+    release:
+        types: [published]
+
+permissions:
+    id-token: write
+    contents: read
+
+jobs:
+    publish:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+            - uses: oven-sh/setup-bun@v2
+              with:
+                  bun-version: latest
+            - name: Set up Node.js
+              uses: actions/setup-node@v4
+              with:
+                  node-version: 24
+                  check-latest: true
+                  registry-url: 'https://registry.npmjs.org'
+            - name: Update npm
+              run: npm install -g npm@latest
+            - run: bun i
+            - run: bun run build
+            - run: npm publish --access public

@@ -1,53 +1,56 @@
 {
-  "name": "node-widevine",
-  "version": "0.3.1",
-  "description": "Node Widevine",
-  "keywords": [],
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/frooastside/node-widevine.git"
-  },
-  "author": "Frooastside <frooastside@gmail.com>",
-  "license": "GPL-3.0-or-later",
-  "bugs": {
-    "url": "https://github.com/frooastside/node-widevine/issues"
-  },
-  "homepage": "https://github.com/frooastside/node-widevine/",
-  "main": "dist/index.js",
-  "bin": {},
-  "type": "module",
-  "scripts": {
-    "proto:compile": "npx buf generate proto",
-    "lint": "eslint --ext ts .",
-    "lint:fix": "eslint --fix .",
-    "test": "pnpm build && ts-mocha test/**/*.spec.ts",
-    "pretty": "prettier --write .",
-    "build": "tsc --incremental",
-    "clean": "rimraf dist"
-  },
-  "devDependencies": {
-    "@eslint/eslintrc": "^3.1.0",
-    "@eslint/js": "^9.8.0",
-    "@types/mocha": "^10.0.7",
-    "@types/node": "22.8.1",
-    "@types/node-forge": "^1.3.11",
-    "@typescript-eslint/eslint-plugin": "8.11.0",
-    "@typescript-eslint/parser": "8.11.0",
-    "dotenv": "^16.4.5",
-    "eslint": "^9.8.0",
-    "eslint-config-prettier": "^9.1.0",
-    "globals": "^15.8.0",
-    "mocha": "^10.7.0",
-    "prettier": "3.3.3",
-    "rimraf": "^6.0.1",
-    "ts-mocha": "^10.0.0",
-    "ts-node": "^10.9.2",
-    "typescript": "^5.5.4"
-  },
-  "dependencies": {
-    "@bufbuild/buf": "^1.35.1",
-    "@bufbuild/protobuf": "2.2.0",
-    "@bufbuild/protoc-gen-es": "2.2.0",
-    "node-forge": "^1.3.1"
-  }
+    "name": "widevine",
+    "version": "1.0.0",
+    "description": "NodeJS Widevine Client",
+    "keywords": [],
+    "repository": {
+        "type": "git",
+        "url": "git://github.com/frooastside/node-widevine.git"
+    },
+    "author": "Frooastside <frooastside@gmail.com>",
+    "license": "GPL-3.0-or-later",
+    "bugs": {
+        "url": "https://github.com/frooastside/node-widevine/issues"
+    },
+    "homepage": "https://github.com/frooastside/node-widevine/",
+    "scripts": {
+        "proto:compile": "npx buf generate proto",
+        "lint": "eslint --ext ts ./src --quiet",
+        "prettier:check": "prettier --check .",
+        "prettier:fix": "prettier --write .",
+        "build": "tsc -p tsconfig.esm.json && tsc -p tsconfig.cjs.json"
+    },
+    "main": "dist/cjs/index.js",
+    "module": "dist/esm/index.js",
+    "types": "dist/esm/index.d.ts",
+    "exports": {
+        ".": {
+            "import": "./dist/esm/index.js",
+            "require": "./dist/cjs/index.js",
+            "types": "./dist/esm/index.d.ts"
+        }
+    },
+    "files": [
+        "dist"
+    ],
+    "devDependencies": {
+        "@eslint/js": "^9.39.1",
+        "@types/node": "^24.10.1",
+        "@types/node-forge": "^1.3.14",
+        "dotenv": "^17.2.3",
+        "eslint": "^9.39.1",
+        "eslint-config-prettier": "^10.1.8",
+        "globals": "^16.5.0",
+        "jiti": "^2.6.1",
+        "prettier": "^3.6.2",
+        "ts-node": "^10.9.2",
+        "typescript": "^5.9.3",
+        "typescript-eslint": "^8.47.0",
+        "@bufbuild/buf": "^1.60.0",
+        "@bufbuild/protoc-gen-es": "^2.10.1"
+    },
+    "dependencies": {
+        "@bufbuild/protobuf": "^2.10.1",
+        "node-forge": "^1.3.1"
+    }
 }

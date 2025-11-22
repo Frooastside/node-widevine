@@ -1,112 +1,92 @@
-import crypto from "crypto";
+import crypto from 'crypto'
 
-export class AES_CMAC {
-  private readonly BLOCK_SIZE = 16;
-  private readonly XOR_RIGHT = Buffer.from([0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x87]);
-  private readonly EMPTY_BLOCK_SIZE_BUFFER = Buffer.alloc(this.BLOCK_SIZE);
+export default class AES_CMAC {
+    private readonly BLOCK_SIZE = 16
+    private readonly Rb = Buffer.from([
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x87
+    ])
+    private readonly ZERO = Buffer.alloc(16)
 
-  private _key: Buffer;
-  private _subkeys: { first: Buffer; second: Buffer };
+    private key: Buffer
+    private sub1: Buffer
+    private sub2: Buffer
 
-  public constructor(key: Buffer) {
-    if (![16, 24, 32].includes(key.length)) {
-      throw new Error("Key size must be 128, 192, or 256 bits.");
-    }
-    this._key = key;
-    this._subkeys = this._generateSubkeys();
-  }
-
-  public calculate(message: Buffer): Buffer {
-    const blockCount = this._getBlockCount(message);
-
-    let x = this.EMPTY_BLOCK_SIZE_BUFFER;
-    let y;
-
-    for (let i = 0; i < blockCount - 1; i++) {
-      const from = i * this.BLOCK_SIZE;
-      const block = message.subarray(from, from + this.BLOCK_SIZE);
-      y = this._xor(x, block);
-      x = this._aes(y);
+    constructor(key: Buffer) {
+        if (![16, 24, 32].includes(key.length)) {
+            throw new Error('Key size must be 128, 192, or 256 bits.')
+        }
+        this.key = key
+        const { first, second } = this.generateSubkeys()
+        this.sub1 = first
+        this.sub2 = second
     }
 
-    y = this._xor(x, this._getLastBlock(message));
-    x = this._aes(y);
+    calculate(message: Buffer): Buffer {
+        const blocks = Math.ceil(message.length / 16) || 1
+        let x: Buffer = this.ZERO
+        let i = 0
 
-    return x;
-  }
+        for (; i < blocks - 1; i++) {
+            const off = i * 16
+            x = this.aes(this.xor(x, message.subarray(off, off + 16)))
+        }
 
-  private _generateSubkeys(): { first: Buffer; second: Buffer } {
-    const l = this._aes(this.EMPTY_BLOCK_SIZE_BUFFER);
-
-    let first = this._bitShiftLeft(l);
-    if (l[0] & 0x80) {
-      first = this._xor(first, this.XOR_RIGHT);
+        const last = this.getLastBlock(message)
+        return this.aes(this.xor(x, last))
     }
 
-    let second = this._bitShiftLeft(first);
-    if (first[0] & 0x80) {
-      second = this._xor(second, this.XOR_RIGHT);
+    private generateSubkeys() {
+        const L = this.aes(this.ZERO)
+        const K1 = this.leftShift(L)
+        if (L[0] & 0x80) this.xorInPlace(K1, this.Rb)
+        const K2 = this.leftShift(K1)
+        if (K1[0] & 0x80) this.xorInPlace(K2, this.Rb)
+        return { first: K1, second: K2 }
     }
 
-    return { first: first, second: second };
-  }
-
-  private _getBlockCount(message: Buffer): number {
-    const blockCount = Math.ceil(message.length / this.BLOCK_SIZE);
-    return blockCount === 0 ? 1 : blockCount;
-  }
-
-  private _aes(message: Buffer): Buffer {
-    const cipher = crypto.createCipheriv(`aes-${this._key.length * 8}-cbc`, this._key, Buffer.alloc(this.BLOCK_SIZE));
-    const result = cipher.update(message).subarray(0, 16);
-    cipher.destroy();
-    return result;
-  }
-
-  private _getLastBlock(message: Buffer): Buffer {
-    const blockCount = this._getBlockCount(message);
-    const paddedBlock = this._padding(message, blockCount - 1);
-
-    let complete = false;
-    if (message.length > 0) {
-      complete = message.length % this.BLOCK_SIZE === 0;
+    private aes(block: Buffer): Buffer {
+        const cipher = crypto.createCipheriv(
+            `aes-${this.key.length * 8}-cbc`,
+            this.key,
+            this.ZERO
+        )
+        const r = cipher.update(block).subarray(0, 16)
+        cipher.final()
+        return r
     }
 
-    const key = complete ? this._subkeys.first : this._subkeys.second;
-    return this._xor(paddedBlock, key);
-  }
+    private getLastBlock(message: Buffer): Buffer {
+        const blocks = Math.ceil(message.length / 16) || 1
+        const complete = message.length > 0 && message.length % 16 === 0
+        const key = complete ? this.sub1 : this.sub2
 
-  private _padding(message: Buffer, blockIndex: number): Buffer {
-    const block = Buffer.alloc(this.BLOCK_SIZE);
+        const out = Buffer.alloc(16)
+        const from = (blocks - 1) * 16
+        const slice = message.subarray(from, from + 16)
+        out.set(slice)
+        if (!complete) out[slice.length] = 0x80
 
-    const from = blockIndex * this.BLOCK_SIZE;
-
-    const slice = message.subarray(from, from + this.BLOCK_SIZE);
-    block.set(slice);
-
-    if (slice.length !== this.BLOCK_SIZE) {
-      block[slice.length] = 0x80;
+        return this.xor(out, key)
     }
 
-    return block;
-  }
-
-  private _bitShiftLeft(input: Buffer): Buffer {
-    const output = Buffer.alloc(input.length);
-    let overflow = 0;
-    for (let i = input.length - 1; i >= 0; i--) {
-      output[i] = (input[i] << 1) | overflow;
-      overflow = input[i] & 0x80 ? 1 : 0;
+    private leftShift(b: Buffer): Buffer {
+        const out = Buffer.alloc(b.length)
+        let carry = 0
+        for (let i = b.length - 1; i >= 0; i--) {
+            const v = b[i]
+            out[i] = ((v << 1) & 0xff) | carry
+            carry = v >>> 7
+        }
+        return out
     }
-    return output;
-  }
 
-  private _xor(a: Buffer, b: Buffer): Buffer {
-    const length = Math.min(a.length, b.length);
-    const output = Buffer.alloc(length);
-    for (let i = 0; i < length; i++) {
-      output[i] = a[i] ^ b[i];
+    private xor(a: Buffer, b: Buffer): Buffer {
+        const out = Buffer.alloc(16)
+        for (let i = 0; i < 16; i++) out[i] = a[i] ^ b[i]
+        return out
     }
-    return output;
-  }
+
+    private xorInPlace(a: Buffer, b: Buffer) {
+        for (let i = 0; i < 16; i++) a[i] ^= b[i]
+    }
 }
