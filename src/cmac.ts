@@ -8,8 +8,8 @@ export default class AES_CMAC {
     private readonly ZERO = Buffer.alloc(16)
 
     private key: Buffer
-    private sub1: Buffer
-    private sub2: Buffer
+    private x: Buffer
+    private y: Buffer
 
     constructor(key: Buffer) {
         if (![16, 24, 32].includes(key.length)) {
@@ -17,8 +17,8 @@ export default class AES_CMAC {
         }
         this.key = key
         const { first, second } = this.generateSubkeys()
-        this.sub1 = first
-        this.sub2 = second
+        this.x = first
+        this.y = second
     }
 
     calculate(message: Buffer): Buffer {
@@ -58,7 +58,7 @@ export default class AES_CMAC {
     private getLastBlock(message: Buffer): Buffer {
         const blocks = Math.ceil(message.length / 16) || 1
         const complete = message.length > 0 && message.length % 16 === 0
-        const key = complete ? this.sub1 : this.sub2
+        const key = complete ? this.x : this.y
 
         const out = Buffer.alloc(16)
         const from = (blocks - 1) * 16

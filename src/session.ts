@@ -49,7 +49,7 @@ export default class Session {
      * @returns The static service certificate challenge buffer
      */
     public getServiceCertificateChallenge() {
-        return SERVICE_CERTIFICATE_CHALLENGE
+        return Buffer.from(SERVICE_CERTIFICATE_CHALLENGE)
     }
 
     /**
