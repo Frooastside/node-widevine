@@ -7,14 +7,14 @@
     ],
     "repository": {
         "type": "git",
-        "url": "git://github.com/frooastside/node-widevine.git"
+        "url": "git://github.com/Frooastside/node-widevine.git"
     },
     "author": "Frooastside <frooastside@gmail.com>",
     "license": "GPL-3.0-or-later",
     "bugs": {
-        "url": "https://github.com/frooastside/node-widevine/issues"
+        "url": "https://github.com/Frooastside/node-widevine/issues"
     },
-    "homepage": "https://github.com/frooastside/node-widevine/",
+    "homepage": "https://github.com/Frooastside/node-widevine/",
     "scripts": {
         "proto:compile": "npx buf generate proto",
         "lint": "eslint --ext ts ./src --quiet",
