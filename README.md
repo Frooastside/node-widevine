@@ -97,16 +97,19 @@ const response = await fetch(licenseUrl, {
 
 // Check if request was successful
 if (response.ok) {
-  // Parse license
-  const successful = session.parseLicense(Buffer.from(await response.arrayBuffer())).length > 0
-  console.log(`successful? ${successful ? 'yes' : 'no'}`)
+    // Parse license
+    const successful =
+        session.parseLicense(Buffer.from(await response.arrayBuffer())).length >
+        0
+    console.log(`successful? ${successful ? 'yes' : 'no'}`)
 } else {
-  console.error('Request failed!')
-  console.log(await response.text())
+    console.error('Request failed!')
+    console.log(await response.text())
 }
 ```
 
 ## Build
+
 #### Code
 
 Just run `bun run build` to generate the js, map and type definition files from the Typescript source.

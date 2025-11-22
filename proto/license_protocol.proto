@@ -1,3 +1,7 @@
+// Copyright 2018 Google LLC. All Rights Reserved. This file and proprietary
+// source code may only be used and distributed under the Widevine License
+// Agreement.
+
 syntax = "proto2";
 
 package video_widevine;
