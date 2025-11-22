@@ -79,7 +79,7 @@ const licenseUrl = 'https://cwip-shaka-proxy.appspot.com/no_auth'
 // Service Certificate Request
 const serviceCertificateResponse = await fetch(licenseUrl, {
     method: 'POST',
-    body: Buffer.from(session.getServiceCertificateChallenge())
+    body: session.getServiceCertificateChallenge()
 })
 
 const serviceCertificate = Buffer.from(
