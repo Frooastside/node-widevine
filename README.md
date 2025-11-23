@@ -12,7 +12,8 @@ A lightweight NodeJS library for working with **Google Widevine**
 
 - [Disclaimer](#disclaimer)
 - [Installation](#installation)
-- [Examples](#examples)
+- [Usage](#usage)
+- [Usage with WVD](#usage-with-wvd-files)
 - [Build it yourself](#build)
 
 ## Disclaimer
@@ -49,9 +50,7 @@ yarn:
 yarn add widevine
 ```
 
-## Examples
-
-Example using bitmovin demo
+## Usage
 
 ```typescript
 import { readFileSync } from 'fs'
@@ -63,6 +62,68 @@ const privateKey = readFileSync('./device_private_key')
 
 // Initialize Widevine client
 const device = Widevine.init(identifierBlob, privateKey)
+
+// Get Device info
+console.log(device.info)
+
+// PSSH found in the MPD manifest
+const pssh = Buffer.from(
+    'AAAAW3Bzc2gAAAAA7e+LqXnWSs6jyCfc1R0h7QAAADsIARIQ62dqu8s0Xpa7z2FmMPGj2hoNd2lkZXZpbmVfdGVzdCIQZmtqM2xqYVNkZmFsa3IzaioCSEQyAA==',
+    'base64'
+)
+
+// Generate Session
+const session = device.createSession(pssh, LicenseType.STREAMING)
+
+// License Server URL
+const licenseUrl = 'https://cwip-shaka-proxy.appspot.com/no_auth'
+
+// Service Certificate Request
+const serviceCertificateResponse = await fetch(licenseUrl, {
+    method: 'POST',
+    body: session.getServiceCertificateChallenge()
+})
+
+const serviceCertificate = Buffer.from(
+    await serviceCertificateResponse.arrayBuffer()
+)
+
+// Set Service Certificate
+session.setServiceCertificateFromMessage(serviceCertificate)
+
+// License Request
+const response = await fetch(licenseUrl, {
+    method: 'POST',
+    body: session.generateChallenge()
+})
+
+// Check if request was successful
+if (response.ok) {
+    // Parse license
+    const successful =
+        session.parseLicense(Buffer.from(await response.arrayBuffer())).length >
+        0
+    console.log(`successful? ${successful ? 'yes' : 'no'}`)
+} else {
+    console.error('Request failed!')
+    console.log(await response.text())
+}
+```
+
+## Usage with WVD files
+
+```typescript
+import { readFileSync } from 'fs'
+import Widevine, { LicenseType } from 'widevine'
+
+// Read WVD file
+const wvd = readFileSync('./device.wvd')
+
+// Initialize Widevine client
+const device = Widevine.initWVD(wvd)
+
+// Get Device info
+console.log(device.info)
 
 // PSSH found in the MPD manifest
 const pssh = Buffer.from(
