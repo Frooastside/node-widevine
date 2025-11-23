@@ -1,5 +1,9 @@
 // Utils
-import type { ContentDecryptionModule, KeyContainer } from './types'
+import type {
+    ContentDecryptionModule,
+    KeyContainer,
+    WidevineInfo
+} from './types'
 
 // Packages
 import forge from 'node-forge'
@@ -8,17 +12,22 @@ import { fromBinary } from '@bufbuild/protobuf'
 // Protocol Buffers
 import * as protocol from './license_protocol_pb'
 import Session from './session'
+import PYWIDEVINE_DEVICE from './pywidevine/device'
 
 export default class Widevine {
     private identifierBlob: protocol.ClientIdentification
     private devicePrivateKey: forge.pki.rsa.PrivateKey
+    /** Device metadata extracted from the client id blob */
+    public info: WidevineInfo
 
     private constructor(
         identifierBlob: protocol.ClientIdentification,
-        devicePrivateKey: forge.pki.rsa.PrivateKey
+        devicePrivateKey: forge.pki.rsa.PrivateKey,
+        info: WidevineInfo
     ) {
         this.identifierBlob = identifierBlob
         this.devicePrivateKey = devicePrivateKey
+        this.info = info
     }
 
     /**
@@ -30,6 +39,7 @@ export default class Widevine {
      * @throws If the device client ID blob cannot be parsed or if the private key does not match
      */
     static init(identifierBlob: Buffer, privateKey: Buffer) {
+        // Parse Client Blob
         const deviceIdentifierBlob = fromBinary(
             protocol.ClientIdentificationSchema,
             identifierBlob
@@ -39,7 +49,62 @@ export default class Widevine {
             privateKey.toString('binary')
         )
 
-        return new Widevine(deviceIdentifierBlob, devicePrivateKey)
+        // Create DRM Cert to get system id (parsing client blob token)
+        const drmCertificate = fromBinary(
+            protocol.DrmCertificateSchema,
+            deviceIdentifierBlob.token
+        )
+
+        const info: WidevineInfo = {
+            client_info: {},
+            system_id: drmCertificate.systemId
+        }
+        for (const ci of deviceIdentifierBlob.clientInfo) {
+            info.client_info[ci.name] = ci.value
+        }
+
+        return new Widevine(deviceIdentifierBlob, devicePrivateKey, info)
+    }
+
+    /**
+     * Initializes a Widevine client with a Widevine WVD (V1/V2) file
+     *
+     * @param prd Buffer containing a Widevine WVD file
+     * @returns A fully initialized Widevine instance
+     * @throws If WVD parsing fails or if the private key does not match
+     */
+    static initWVD(wvd: Buffer) {
+        // Parse WVD file
+        const device = PYWIDEVINE_DEVICE.parse(wvd)
+
+        // Parse Client Blob
+        const deviceIdentifierBlob = fromBinary(
+            protocol.ClientIdentificationSchema,
+            device.device.client_id
+        )
+
+        // WVD contains the PK in DER format
+        const der = forge.util.createBuffer(device.device.private_key)
+        const asn1 = forge.asn1.fromDer(der)
+        const devicePrivateKey = forge.pki.privateKeyFromAsn1(asn1)
+
+        // Create DRM Cert to get system id (parsing client blob token)
+        const drmCertificate = fromBinary(
+            protocol.DrmCertificateSchema,
+            deviceIdentifierBlob.token
+        )
+
+        const info: WidevineInfo = {
+            client_info: {},
+            system_id: drmCertificate.systemId,
+            device_version: device.device.version,
+            security_level: device.device.security_level
+        }
+        for (const ci of deviceIdentifierBlob.clientInfo) {
+            info.client_info[ci.name] = ci.value
+        }
+
+        return new Widevine(deviceIdentifierBlob, devicePrivateKey, info)
     }
 
     /**
