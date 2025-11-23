@@ -6,7 +6,7 @@ import {
     WIDEVINE_SYSTEM_ID
 } from './consts'
 import type { KeyContainer } from './types'
-import AES_CMAC from './cmac'
+import AES_CMAC from './utils/cmac'
 
 // Packages
 import forge from 'node-forge'

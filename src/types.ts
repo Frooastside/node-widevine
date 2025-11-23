@@ -8,6 +8,12 @@ export type ContentDecryptionModule = {
     identifierBlob: Buffer
 }
 
+export interface KeyBoxData {
+    device_id: Buffer<ArrayBuffer>
+    device_key: Buffer<ArrayBuffer>
+    data: Buffer<ArrayBuffer>
+}
+
 export type WidevineInfo = {
     client_info: Record<string, any>
     system_id: number
