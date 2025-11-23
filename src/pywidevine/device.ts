@@ -21,17 +21,14 @@ export default class PYWIDEVINE_DEVICE {
                 `Invalid version, not a WVD file: version ${version}`
             )
         // Check device type
-        const type = buf.readInt8(offset) as 1 | 2
+        // const type = buf.readInt8(offset) as 1 | 2
         offset += 1
-        if (type > 2 || type < 1)
-            throw new Error(`Invalid type, not a WVD file: type ${version}`)
-
         // Check device security level
         const security_level = buf.readInt8(offset) as 1 | 2 | 3
         offset += 1
         if (security_level > 3 || security_level < 1)
             throw new Error(
-                `Invalid security_level, not a WVD file: security_level ${version}`
+                `Invalid security_level, not a WVD file: security_level ${security_level}`
             )
 
         // Device Flags
