@@ -136,4 +136,4 @@ export default class Widevine {
 }
 
 export const LicenseType = protocol.LicenseType
-export type { ContentDecryptionModule, KeyContainer }
+export type { Session, ContentDecryptionModule, KeyContainer }

@@ -1,6 +1,6 @@
 {
     "name": "widevine",
-    "version": "1.0.2",
+    "version": "1.0.3",
     "description": "NodeJS Widevine Client",
     "keywords": [
         "widevine"
