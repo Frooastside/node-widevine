@@ -2,7 +2,7 @@
 
 A lightweight NodeJS library for working with **Google Widevine**
 
-- Loading and initializing Widevine device credentials (device_client_id_blob + device_private_key)
+- Loading and initializing Widevine device credentials (device_client_id_blob + device_private_key - WVD v1/v2)
 - Creating Widevine license acquisition challenges (SignedMessage / LicenseRequest)
 - Parsing and decrypting Widevine license responses (License / KeyContainer)
 - Handling service certificates and encrypted client identification
