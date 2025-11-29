@@ -12,6 +12,12 @@ export interface KeyBoxData {
     device_id: Buffer<ArrayBuffer>
     device_key: Buffer<ArrayBuffer>
     data: Buffer<ArrayBuffer>
+    parsed_data: {
+        flags: number
+        system_id: number
+        provisioning_id: Buffer<ArrayBuffer>
+        encrypted_data: Buffer<ArrayBuffer>
+    }
 }
 
 export type WidevineInfo = {

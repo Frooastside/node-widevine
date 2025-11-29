@@ -2,7 +2,7 @@ import { KeyBoxData } from '../types'
 import { crc32Mpeg2 } from '../utils/crc32mpeg2'
 
 export default class KeyBox {
-    private data: KeyBoxData
+    public data: KeyBoxData
 
     private constructor(data: KeyBoxData) {
         this.data = data
@@ -43,11 +43,42 @@ export default class KeyBox {
         const integrity_test = KeyBox.validateKeyBox(crc, buf)
         if (!integrity_test) throw new Error('KeyBox integrity check failed.')
 
+        const parsed_data = this.parseData(data, 0)
+
         return new KeyBox({
-            device_id: device_id,
-            device_key: device_key,
-            data: data
+            device_id,
+            device_key,
+            data,
+            parsed_data
         })
+    }
+
+    static parseData(buf: Buffer, offset = 0) {
+        // Data Flags
+        const flags = buf.readUint32BE(offset)
+        offset += 4
+        // System ID
+        const system_id = buf.readUint32BE(offset)
+        offset += 4
+        // Provisioning ID
+        const provisioning_id = buf.subarray(
+            offset,
+            offset + 16
+        ) as Buffer<ArrayBuffer>
+        offset += 16
+        // Encrypted Data
+        const encrypted_data = buf.subarray(
+            offset,
+            offset + 48
+        ) as Buffer<ArrayBuffer>
+        offset += 48
+
+        return {
+            flags: flags,
+            system_id: system_id,
+            provisioning_id: provisioning_id,
+            encrypted_data: encrypted_data
+        }
     }
 
     private static validateKeyBox(crc_expected: number, buf: Buffer) {
