@@ -2,9 +2,7 @@ import crypto from 'crypto'
 
 export default class AES_CMAC {
     private readonly BLOCK_SIZE = 16
-    private readonly Rb = Buffer.from([
-        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x87
-    ])
+    private readonly Rb = Buffer.from([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x87])
     private readonly ZERO = Buffer.alloc(16)
 
     private key: Buffer
@@ -45,11 +43,7 @@ export default class AES_CMAC {
     }
 
     private aes(block: Buffer): Buffer {
-        const cipher = crypto.createCipheriv(
-            `aes-${this.key.length * 8}-cbc`,
-            this.key,
-            this.ZERO
-        )
+        const cipher = crypto.createCipheriv(`aes-${this.key.length * 8}-cbc`, this.key, this.ZERO)
         const r = cipher.update(block).subarray(0, 16)
         cipher.final()
         return r

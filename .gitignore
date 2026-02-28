@@ -140,4 +140,6 @@ dist
 
 # End of https://www.toptal.com/developers/gitignore/api/node
 
-tests
+tests/*
+!tests/req.ts
+!tests/req_wvd.ts

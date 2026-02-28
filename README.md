@@ -67,10 +67,7 @@ const device = Widevine.init(identifierBlob, privateKey)
 console.log(device.info)
 
 // PSSH found in the MPD manifest
-const pssh = Buffer.from(
-    'AAAAW3Bzc2gAAAAA7e+LqXnWSs6jyCfc1R0h7QAAADsIARIQ62dqu8s0Xpa7z2FmMPGj2hoNd2lkZXZpbmVfdGVzdCIQZmtqM2xqYVNkZmFsa3IzaioCSEQyAA==',
-    'base64'
-)
+const pssh = Buffer.from('AAAAW3Bzc2gAAAAA7e+LqXnWSs6jyCfc1R0h7QAAADsIARIQ62dqu8s0Xpa7z2FmMPGj2hoNd2lkZXZpbmVfdGVzdCIQZmtqM2xqYVNkZmFsa3IzaioCSEQyAA==', 'base64')
 
 // Generate Session
 const session = device.createSession(pssh, LicenseType.STREAMING)
@@ -84,9 +81,7 @@ const serviceCertificateResponse = await fetch(licenseUrl, {
     body: session.getServiceCertificateChallenge()
 })
 
-const serviceCertificate = Buffer.from(
-    await serviceCertificateResponse.arrayBuffer()
-)
+const serviceCertificate = Buffer.from(await serviceCertificateResponse.arrayBuffer())
 
 // Set Service Certificate
 session.setServiceCertificateFromMessage(serviceCertificate)
@@ -100,9 +95,7 @@ const response = await fetch(licenseUrl, {
 // Check if request was successful
 if (response.ok) {
     // Parse license
-    const successful =
-        session.parseLicense(Buffer.from(await response.arrayBuffer())).length >
-        0
+    const successful = session.parseLicense(Buffer.from(await response.arrayBuffer())).length > 0
     console.log(`successful? ${successful ? 'yes' : 'no'}`)
 } else {
     console.error('Request failed!')
@@ -126,10 +119,7 @@ const device = Widevine.initWVD(wvd)
 console.log(device.info)
 
 // PSSH found in the MPD manifest
-const pssh = Buffer.from(
-    'AAAAW3Bzc2gAAAAA7e+LqXnWSs6jyCfc1R0h7QAAADsIARIQ62dqu8s0Xpa7z2FmMPGj2hoNd2lkZXZpbmVfdGVzdCIQZmtqM2xqYVNkZmFsa3IzaioCSEQyAA==',
-    'base64'
-)
+const pssh = Buffer.from('AAAAW3Bzc2gAAAAA7e+LqXnWSs6jyCfc1R0h7QAAADsIARIQ62dqu8s0Xpa7z2FmMPGj2hoNd2lkZXZpbmVfdGVzdCIQZmtqM2xqYVNkZmFsa3IzaioCSEQyAA==', 'base64')
 
 // Generate Session
 const session = device.createSession(pssh, LicenseType.STREAMING)
@@ -143,9 +133,7 @@ const serviceCertificateResponse = await fetch(licenseUrl, {
     body: session.getServiceCertificateChallenge()
 })
 
-const serviceCertificate = Buffer.from(
-    await serviceCertificateResponse.arrayBuffer()
-)
+const serviceCertificate = Buffer.from(await serviceCertificateResponse.arrayBuffer())
 
 // Set Service Certificate
 session.setServiceCertificateFromMessage(serviceCertificate)
@@ -159,9 +147,7 @@ const response = await fetch(licenseUrl, {
 // Check if request was successful
 if (response.ok) {
     // Parse license
-    const successful =
-        session.parseLicense(Buffer.from(await response.arrayBuffer())).length >
-        0
+    const successful = session.parseLicense(Buffer.from(await response.arrayBuffer())).length > 0
     console.log(`successful? ${successful ? 'yes' : 'no'}`)
 } else {
     console.error('Request failed!')

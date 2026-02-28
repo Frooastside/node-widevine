@@ -1,36 +1,20 @@
-// Utils
-import {
-    COMMON_SERVICE_CERTIFICATE,
-    SERVICE_CERTIFICATE_CHALLENGE,
-    WIDEVINE_ROOT_PUBLIC_KEY,
-    WIDEVINE_SYSTEM_ID
-} from './consts'
-import type { KeyContainer } from './types'
-import AES_CMAC from './cmac'
-
-// Packages
-import forge from 'node-forge'
 import { create, fromBinary, toBinary } from '@bufbuild/protobuf'
-
-// Protocol Buffers
+import crypto, { KeyObject, randomBytes } from 'crypto'
+import AES_CMAC from './cmac'
+import { COMMON_SERVICE_CERTIFICATE, SERVICE_CERTIFICATE_CHALLENGE, WIDEVINE_ROOT_PUBLIC_KEY, WIDEVINE_SYSTEM_ID } from './consts'
 import * as protocol from './license_protocol_pb'
+import type { KeyContainer } from './types'
 
 export default class Session {
     private identifierBlob: protocol.ClientIdentification
-    private devicePrivateKey: forge.pki.rsa.PrivateKey
+    private devicePrivateKey: KeyObject
     private pssh: Buffer
     private licenseType: protocol.LicenseType
     private android: boolean = false
     private rawLicenseRequest?: Buffer
     private serviceCertificate?: protocol.SignedDrmCertificate
 
-    constructor(
-        identifierBlob: protocol.ClientIdentification,
-        devicePrivateKey: forge.pki.rsa.PrivateKey,
-        pssh: Buffer,
-        licenseType: protocol.LicenseType,
-        android: boolean = false
-    ) {
+    constructor(identifierBlob: protocol.ClientIdentification, devicePrivateKey: KeyObject, pssh: Buffer, licenseType: protocol.LicenseType, android: boolean = false) {
         this.identifierBlob = identifierBlob
         this.devicePrivateKey = devicePrivateKey
         this.pssh = pssh
@@ -74,14 +58,9 @@ export default class Session {
      * @throws If the message does not contain an embedded certificate payload
      */
     public setServiceCertificateFromMessage(rawSignedMessage: Buffer) {
-        const signedMessage: protocol.SignedMessage = fromBinary(
-            protocol.SignedMessageSchema,
-            rawSignedMessage
-        )
+        const signedMessage: protocol.SignedMessage = fromBinary(protocol.SignedMessageSchema, rawSignedMessage)
         if (!signedMessage.msg) {
-            throw new Error(
-                'The service certificate message does not contain a message'
-            )
+            throw new Error('The service certificate message does not contain a message')
         }
         this.setServiceCertificate(Buffer.from(signedMessage.msg))
     }
@@ -93,12 +72,9 @@ export default class Session {
      * @throws If the certificate is malformed or not signed by the Widevine root
      */
     public setServiceCertificate(serviceCertificate: Buffer) {
-        const signedServiceCertificate: protocol.SignedDrmCertificate =
-            fromBinary(protocol.SignedDrmCertificateSchema, serviceCertificate)
+        const signedServiceCertificate: protocol.SignedDrmCertificate = fromBinary(protocol.SignedDrmCertificateSchema, serviceCertificate)
         if (!this.verifyServiceCertificate(signedServiceCertificate)) {
-            throw new Error(
-                'Service certificate is not signed by the Widevine root certificate'
-            )
+            throw new Error('Service certificate is not signed by the Widevine root certificate')
         }
         this.serviceCertificate = signedServiceCertificate
     }
@@ -124,86 +100,51 @@ export default class Session {
      * @throws If the PSSH is invalid, the Widevine system ID is missing, or the session was already consumed
      */
     public generateChallenge(): Buffer<ArrayBuffer> {
-        if (this.rawLicenseRequest)
-            throw new Error('Session already consumed, open up a new one')
-        if (!this.pssh.subarray(12, 28).equals(Buffer.from(WIDEVINE_SYSTEM_ID)))
-            throw new Error('The pssh is not an actuall pssh')
+        if (this.rawLicenseRequest) throw new Error('Session already consumed, open up a new one')
+        if (!this.pssh.subarray(12, 28).equals(Buffer.from(WIDEVINE_SYSTEM_ID))) throw new Error('The pssh is not an actuall pssh')
 
         const pssh = this.parsePSSH(this.pssh)
         if (!pssh) throw new Error('Pssh is invalid')
 
-        const licenseRequest: protocol.LicenseRequest = create(
-            protocol.LicenseRequestSchema,
-            {
-                type: protocol.LicenseRequest_RequestType.NEW,
-                contentId: create(
-                    protocol.LicenseRequest_ContentIdentificationSchema,
-                    {
-                        contentIdVariant: {
-                            case: 'widevinePsshData',
-                            value: create(
-                                protocol.LicenseRequest_ContentIdentification_WidevinePsshDataSchema,
-                                {
-                                    psshData: [this.pssh.subarray(32)],
-                                    licenseType: this.licenseType,
-                                    requestId: this.android
-                                        ? Buffer.from(
-                                              `${forge.util.bytesToHex(forge.random.getBytesSync(8))}${'01'}${'00000000000000'}`
-                                          )
-                                        : Buffer.from(
-                                              forge.random.getBytesSync(16),
-                                              'binary'
-                                          )
-                                }
-                            )
-                        }
-                    }
-                ),
-                requestTime: BigInt(Date.now()) / BigInt(1000),
-                protocolVersion: protocol.ProtocolVersion.VERSION_2_1,
-                keyControlNonce: Math.floor(Math.random() * 2 ** 31)
-            }
-        )
+        const licenseRequest: protocol.LicenseRequest = create(protocol.LicenseRequestSchema, {
+            type: protocol.LicenseRequest_RequestType.NEW,
+            contentId: create(protocol.LicenseRequest_ContentIdentificationSchema, {
+                contentIdVariant: {
+                    case: 'widevinePsshData',
+                    value: create(protocol.LicenseRequest_ContentIdentification_WidevinePsshDataSchema, {
+                        psshData: [this.pssh.subarray(32)],
+                        licenseType: this.licenseType,
+                        requestId: this.android ? Buffer.from(`${randomBytes(8).toString('hex')}${'01'}${'00000000000000'}`) : randomBytes(16)
+                    })
+                }
+            }),
+            requestTime: BigInt(Date.now()) / BigInt(1000),
+            protocolVersion: protocol.ProtocolVersion.VERSION_2_1,
+            keyControlNonce: Math.floor(Math.random() * 2 ** 31)
+        })
 
         if (this.serviceCertificate) {
-            const encryptedClientIdentification =
-                this.encryptClientIdentification(
-                    this.identifierBlob,
-                    this.serviceCertificate
-                )
+            const encryptedClientIdentification = this.encryptClientIdentification(this.identifierBlob, this.serviceCertificate)
             licenseRequest.encryptedClientId = encryptedClientIdentification
         } else {
             licenseRequest.clientId = this.identifierBlob
         }
 
-        this.rawLicenseRequest = Buffer.from(
-            toBinary(protocol.LicenseRequestSchema, licenseRequest)
-        )
+        this.rawLicenseRequest = Buffer.from(toBinary(protocol.LicenseRequestSchema, licenseRequest))
 
-        const pss: forge.pss.PSS = forge.pss.create({
-            md: forge.md.sha1.create(),
-            mgf: forge.mgf.mgf1.create(forge.md.sha1.create()),
+        const signature = crypto.sign('sha1', this.rawLicenseRequest, {
+            key: this.devicePrivateKey,
+            padding: crypto.constants.RSA_PKCS1_PSS_PADDING,
             saltLength: 20
         })
-        const md = forge.md.sha1.create()
-        md.update(this.rawLicenseRequest.toString('binary'), 'raw')
-        const signature = Buffer.from(
-            this.devicePrivateKey.sign(md, pss),
-            'binary'
-        )
 
-        const signedLicenseRequest: protocol.SignedMessage = create(
-            protocol.SignedMessageSchema,
-            {
-                type: protocol.SignedMessage_MessageType.LICENSE_REQUEST,
-                msg: this.rawLicenseRequest,
-                signature: signature
-            }
-        )
+        const signedLicenseRequest: protocol.SignedMessage = create(protocol.SignedMessageSchema, {
+            type: protocol.SignedMessage_MessageType.LICENSE_REQUEST,
+            msg: this.rawLicenseRequest,
+            signature: signature
+        })
 
-        return Buffer.from(
-            toBinary(protocol.SignedMessageSchema, signedLicenseRequest)
-        )
+        return Buffer.from(toBinary(protocol.SignedMessageSchema, signedLicenseRequest))
     }
 
     /**
@@ -235,10 +176,7 @@ export default class Session {
             throw new Error('Please request a license challenge first')
         }
 
-        const signedLicense = fromBinary(
-            protocol.SignedMessageSchema,
-            rawLicense
-        )
+        const signedLicense = fromBinary(protocol.SignedMessageSchema, rawLicense)
         if (!signedLicense.sessionKey) {
             throw new Error('The license does not contain a session key')
         }
@@ -249,41 +187,24 @@ export default class Session {
             throw new Error('The license does not contain a signature')
         }
 
-        const sessionKey = this.devicePrivateKey.decrypt(
-            Buffer.from(signedLicense.sessionKey).toString('binary'),
-            'RSA-OAEP',
+        const sessionKey = crypto.privateDecrypt(
             {
-                md: forge.md.sha1.create()
-            }
+                key: this.devicePrivateKey,
+                padding: crypto.constants.RSA_PKCS1_OAEP_PADDING,
+                oaepHash: 'sha1'
+            },
+            Buffer.from(signedLicense.sessionKey)
         )
 
-        const cmac = new AES_CMAC(Buffer.from(sessionKey, 'binary'))
+        const cmac = new AES_CMAC(sessionKey)
 
-        const encKeyBase = Buffer.concat([
-            Buffer.from('ENCRYPTION'),
-            Buffer.from('\x00', 'ascii'),
-            this.rawLicenseRequest,
-            Buffer.from('\x00\x00\x00\x80', 'ascii')
-        ])
-        const authKeyBase = Buffer.concat([
-            Buffer.from('AUTHENTICATION'),
-            Buffer.from('\x00', 'ascii'),
-            this.rawLicenseRequest,
-            Buffer.from('\x00\x00\x02\x00', 'ascii')
-        ])
+        const encKeyBase = Buffer.concat([Buffer.from('ENCRYPTION'), Buffer.from('\x00', 'ascii'), this.rawLicenseRequest, Buffer.from('\x00\x00\x00\x80', 'ascii')])
+        const authKeyBase = Buffer.concat([Buffer.from('AUTHENTICATION'), Buffer.from('\x00', 'ascii'), this.rawLicenseRequest, Buffer.from('\x00\x00\x02\x00', 'ascii')])
 
-        const encKey = cmac.calculate(
-            Buffer.concat([Buffer.from('\x01'), encKeyBase])
-        )
-        const serverKey = Buffer.concat([
-            cmac.calculate(Buffer.concat([Buffer.from('\x01'), authKeyBase])),
-            cmac.calculate(Buffer.concat([Buffer.from('\x02'), authKeyBase]))
-        ])
+        const encKey = cmac.calculate(Buffer.concat([Buffer.from('\x01'), encKeyBase]))
+        const serverKey = Buffer.concat([cmac.calculate(Buffer.concat([Buffer.from('\x01'), authKeyBase])), cmac.calculate(Buffer.concat([Buffer.from('\x02'), authKeyBase]))])
 
-        const hmac = forge.hmac.create()
-        hmac.start(forge.md.sha256.create(), serverKey.toString('binary'))
-        hmac.update(Buffer.from(signedLicense.msg).toString('binary'))
-        const calculatedSignature = Buffer.from(hmac.digest().data, 'binary')
+        const calculatedSignature = crypto.createHmac('sha256', serverKey).update(Buffer.from(signedLicense.msg)).digest()
 
         if (!calculatedSignature.equals(signedLicense.signature)) {
             throw new Error('Signatures do not match')
@@ -298,24 +219,11 @@ export default class Session {
 
         const keyContainers = license.key.map((keyContainer) => {
             if (keyContainer.type && keyContainer.key && keyContainer.iv) {
-                const keyId =
-                    keyContainer.id && keyContainer.id.length > 0
-                        ? Buffer.from(keyContainer.id).toString('hex')
-                        : '00000000000000000000000000000000'
+                const keyId = keyContainer.id && keyContainer.id.length > 0 ? Buffer.from(keyContainer.id).toString('hex') : '00000000000000000000000000000000'
 
-                const decipher = forge.cipher.createDecipher(
-                    'AES-CBC',
-                    encKey.toString('binary')
-                )
-                decipher.start({
-                    iv: Buffer.from(keyContainer.iv).toString('binary')
-                })
-                decipher.update(
-                    forge.util.createBuffer(Buffer.from(keyContainer.key))
-                )
-                decipher.finish()
+                const decipher = crypto.createDecipheriv('aes-128-cbc', encKey, Buffer.from(keyContainer.iv))
 
-                const decryptedKey = Buffer.from(decipher.output.data, 'binary')
+                const decryptedKey = Buffer.concat([decipher.update(Buffer.from(keyContainer.key)), decipher.final()])
                 const key: KeyContainer = {
                     kid: keyId,
                     key: decryptedKey.toString('hex')
@@ -336,95 +244,68 @@ export default class Session {
         signedServiceCertificate: protocol.SignedDrmCertificate
     ): protocol.EncryptedClientIdentification {
         if (!signedServiceCertificate.drmCertificate) {
-            throw new Error(
-                'The service certificate does not contain an actual certificate'
-            )
+            throw new Error('The service certificate does not contain an actual certificate')
         }
 
-        const serviceCertificate = fromBinary(
-            protocol.DrmCertificateSchema,
-            signedServiceCertificate.drmCertificate
-        )
+        const serviceCertificate = fromBinary(protocol.DrmCertificateSchema, signedServiceCertificate.drmCertificate)
         if (!serviceCertificate.publicKey) {
-            throw new Error(
-                'The service certificate does not contain a public key'
-            )
+            throw new Error('The service certificate does not contain a public key')
         }
 
-        const key = forge.random.getBytesSync(16)
-        const iv = forge.random.getBytesSync(16)
+        const key = randomBytes(16)
+        const iv = randomBytes(16)
 
-        const cipher = forge.cipher.createCipher('AES-CBC', key)
-        cipher.start({ iv: iv })
-        cipher.update(
-            forge.util.createBuffer(
-                toBinary(
-                    protocol.ClientIdentificationSchema,
-                    clientIdentification
-                )
-            )
-        )
-        cipher.finish()
+        const plaintext = Buffer.from(toBinary(protocol.ClientIdentificationSchema, clientIdentification))
 
-        const rawEncryptedClientIdentification = Buffer.from(
-            cipher.output.data,
-            'binary'
-        )
-        const publicKey = forge.pki.publicKeyFromAsn1(
-            forge.asn1.fromDer(
-                Buffer.from(serviceCertificate.publicKey).toString('binary')
-            )
-        )
-        const encryptedKey = publicKey.encrypt(key, 'RSA-OAEP', {
-            md: forge.md.sha1.create()
+        const cipher = crypto.createCipheriv('aes-128-cbc', key, iv)
+
+        const rawEncryptedClientIdentification = Buffer.concat([cipher.update(plaintext), cipher.final()])
+        const publicKey = crypto.createPublicKey({
+            key: Buffer.from(serviceCertificate.publicKey),
+            format: 'der',
+            type: 'pkcs1'
         })
+        const encryptedKey = crypto.publicEncrypt(
+            {
+                key: publicKey,
+                padding: crypto.constants.RSA_PKCS1_OAEP_PADDING,
+                oaepHash: 'sha1'
+            },
+            key
+        )
 
         return create(protocol.EncryptedClientIdentificationSchema, {
             encryptedClientId: rawEncryptedClientIdentification,
-            encryptedClientIdIv: Buffer.from(iv, 'binary'),
-            encryptedPrivacyKey: Buffer.from(encryptedKey, 'binary'),
+            encryptedClientIdIv: iv,
+            encryptedPrivacyKey: encryptedKey,
             providerId: serviceCertificate.providerId,
             serviceCertificateSerialNumber: serviceCertificate.serialNumber
         })
     }
 
-    private verifyServiceCertificate(
-        signedServiceCertificate: protocol.SignedDrmCertificate
-    ): boolean {
+    private verifyServiceCertificate(signedServiceCertificate: protocol.SignedDrmCertificate): boolean {
         if (!signedServiceCertificate.drmCertificate) {
-            throw new Error(
-                'The service certificate does not contain an actual certificate'
-            )
+            throw new Error('The service certificate does not contain an actual certificate')
         }
         if (!signedServiceCertificate.signature) {
-            throw new Error(
-                'The service certificate does not contain a signature'
-            )
+            throw new Error('The service certificate does not contain a signature')
         }
 
-        const publicKey = forge.pki.publicKeyFromAsn1(
-            forge.asn1.fromDer(
-                Buffer.from(WIDEVINE_ROOT_PUBLIC_KEY).toString('binary')
-            )
-        )
-        const pss: forge.pss.PSS = forge.pss.create({
-            md: forge.md.sha1.create(),
-            mgf: forge.mgf.mgf1.create(forge.md.sha1.create()),
-            saltLength: 20
+        const publicKey = crypto.createPublicKey({
+            key: Buffer.from(WIDEVINE_ROOT_PUBLIC_KEY),
+            format: 'der',
+            type: 'pkcs1'
         })
 
-        const sha1 = forge.md.sha1.create()
-        sha1.update(
-            Buffer.from(signedServiceCertificate.drmCertificate).toString(
-                'binary'
-            ),
-            'raw'
-        )
-
-        return publicKey.verify(
-            sha1.digest().bytes(),
-            Buffer.from(signedServiceCertificate.signature).toString('binary'),
-            pss
+        return crypto.verify(
+            'sha1',
+            Buffer.from(signedServiceCertificate.drmCertificate),
+            {
+                key: publicKey,
+                padding: crypto.constants.RSA_PKCS1_PSS_PADDING,
+                saltLength: 20
+            },
+            Buffer.from(signedServiceCertificate.signature)
         )
     }
 
@@ -434,10 +315,7 @@ export default class Session {
 
     private parsePSSH(pssh: Buffer): protocol.WidevinePsshData | null {
         try {
-            return fromBinary(
-                protocol.WidevinePsshDataSchema,
-                pssh.subarray(32)
-            )
+            return fromBinary(protocol.WidevinePsshDataSchema, pssh.subarray(32))
         } catch {
             return null
         }

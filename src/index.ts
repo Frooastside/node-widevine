@@ -1,30 +1,17 @@
-// Utils
-import type {
-    ContentDecryptionModule,
-    KeyContainer,
-    WidevineInfo
-} from './types'
-
-// Packages
-import forge from 'node-forge'
 import { fromBinary } from '@bufbuild/protobuf'
-
-// Protocol Buffers
+import { KeyObject, createPrivateKey } from 'crypto'
 import * as protocol from './license_protocol_pb'
-import Session from './session'
 import PYWIDEVINE_DEVICE from './pywidevine/device'
+import Session from './session'
+import type { ContentDecryptionModule, KeyContainer, WidevineInfo } from './types'
 
 export default class Widevine {
     private identifierBlob: protocol.ClientIdentification
-    private devicePrivateKey: forge.pki.rsa.PrivateKey
+    private devicePrivateKey: KeyObject
     /** Device metadata extracted from the client id blob */
     public info: WidevineInfo
 
-    private constructor(
-        identifierBlob: protocol.ClientIdentification,
-        devicePrivateKey: forge.pki.rsa.PrivateKey,
-        info: WidevineInfo
-    ) {
+    private constructor(identifierBlob: protocol.ClientIdentification, devicePrivateKey: KeyObject, info: WidevineInfo) {
         this.identifierBlob = identifierBlob
         this.devicePrivateKey = devicePrivateKey
         this.info = info
@@ -40,20 +27,15 @@ export default class Widevine {
      */
     static init(identifierBlob: Buffer, privateKey: Buffer) {
         // Parse Client Blob
-        const deviceIdentifierBlob = fromBinary(
-            protocol.ClientIdentificationSchema,
-            identifierBlob
-        )
+        const deviceIdentifierBlob = fromBinary(protocol.ClientIdentificationSchema, identifierBlob)
 
-        const devicePrivateKey = forge.pki.privateKeyFromPem(
-            privateKey.toString('binary')
-        )
+        const devicePrivateKey = createPrivateKey({
+            key: privateKey,
+            format: 'pem'
+        })
 
         // Create DRM Cert to get system id (parsing client blob token)
-        const drmCertificate = fromBinary(
-            protocol.DrmCertificateSchema,
-            deviceIdentifierBlob.token
-        )
+        const drmCertificate = fromBinary(protocol.DrmCertificateSchema, deviceIdentifierBlob.token)
 
         const info: WidevineInfo = {
             client_info: {},
@@ -78,21 +60,17 @@ export default class Widevine {
         const device = PYWIDEVINE_DEVICE.parse(wvd)
 
         // Parse Client Blob
-        const deviceIdentifierBlob = fromBinary(
-            protocol.ClientIdentificationSchema,
-            device.device.client_id
-        )
+        const deviceIdentifierBlob = fromBinary(protocol.ClientIdentificationSchema, device.device.client_id)
 
         // WVD contains the PK in DER format
-        const der = forge.util.createBuffer(device.device.private_key)
-        const asn1 = forge.asn1.fromDer(der)
-        const devicePrivateKey = forge.pki.privateKeyFromAsn1(asn1)
+        const devicePrivateKey = createPrivateKey({
+            key: device.device.private_key,
+            format: 'der',
+            type: 'pkcs1'
+        })
 
         // Create DRM Cert to get system id (parsing client blob token)
-        const drmCertificate = fromBinary(
-            protocol.DrmCertificateSchema,
-            deviceIdentifierBlob.token
-        )
+        const drmCertificate = fromBinary(protocol.DrmCertificateSchema, deviceIdentifierBlob.token)
 
         const info: WidevineInfo = {
             client_info: {},
@@ -120,18 +98,8 @@ export default class Widevine {
      * @param android Whether to use the Android request ID format (true) or the generic 16-byte format (false - default)
      * @returns A new Session instance bound to this Widevine client
      */
-    public createSession(
-        pssh: Buffer,
-        licenseType: protocol.LicenseType,
-        android: boolean = false
-    ) {
-        return new Session(
-            this.identifierBlob,
-            this.devicePrivateKey,
-            pssh,
-            licenseType,
-            android
-        )
+    public createSession(pssh: Buffer, licenseType: protocol.LicenseType, android: boolean = false) {
+        return new Session(this.identifierBlob, this.devicePrivateKey, pssh, licenseType, android)
     }
 }
 
