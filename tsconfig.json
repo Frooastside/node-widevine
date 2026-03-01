@@ -1,25 +1,13 @@
 {
     "compilerOptions": {
-        "allowSyntheticDefaultImports": true,
-        "declaration": true,
-        "esModuleInterop": true,
-        "forceConsistentCasingInFileNames": true,
-        "isolatedModules": true,
+        "target": "ES2022",
         "module": "ESNext",
-        "moduleResolution": "Node",
-        "newLine": "lf",
-        "noEmit": false,
-        "noFallthroughCasesInSwitch": true,
-        "noImplicitThis": true,
-        "noImplicitAny": true,
+        "moduleResolution": "Bundler",
+        "declaration": true,
         "outDir": "dist",
-        "removeComments": false,
-        "resolveJsonModule": true,
-        "skipLibCheck": true,
-        "sourceMap": false,
         "strict": true,
-        "strictNullChecks": true,
-        "target": "ESNext"
+        "skipLibCheck": true,
+        "isolatedModules": true
     },
-    "include": ["src/**/*.ts"]
+    "include": ["src"]
 }

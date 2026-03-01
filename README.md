@@ -54,7 +54,7 @@ yarn add widevine
 
 ```typescript
 import { readFileSync } from 'fs'
-import Widevine, { LicenseType } from 'widevine'
+import { LicenseType, Widevine } from 'widevine'
 
 // Read cdm files
 const identifierBlob = readFileSync('./device_client_id_blob')
@@ -107,7 +107,7 @@ if (response.ok) {
 
 ```typescript
 import { readFileSync } from 'fs'
-import Widevine, { LicenseType } from 'widevine'
+import { LicenseType, Widevine } from 'widevine'
 
 // Read WVD file
 const wvd = readFileSync('./device.wvd')

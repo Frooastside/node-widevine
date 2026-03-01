@@ -1,4 +1,4 @@
-import Widevine, { LicenseType } from '../src/index'
+import { LicenseType, Widevine } from '../dist/index.cjs'
 import { readFileSync } from 'fs'
 import { performance } from 'perf_hooks'
 
@@ -62,7 +62,7 @@ if (response.ok) {
     const parseEnd = performance.now()
 
     console.log(`License parse: ${(parseEnd - parseStart).toFixed(2)} ms`)
-    console.log(`Successful? ${keys.length > 0 ? 'YES' : 'NO'}`)
+    console.log(`Blob&Key Test Successful? ${keys.length > 0 ? 'YES' : 'NO'}`)
 } else {
     console.error('Request failed!')
     console.log(await response.text())

@@ -2,10 +2,10 @@ import { fromBinary } from '@bufbuild/protobuf'
 import { KeyObject, createPrivateKey } from 'crypto'
 import * as protocol from './license_protocol_pb'
 import PYWIDEVINE_DEVICE from './pywidevine/device'
-import Session from './session'
+import { Session } from './session'
 import type { ContentDecryptionModule, KeyContainer, WidevineInfo } from './types'
 
-export default class Widevine {
+export class Widevine {
     private identifierBlob: protocol.ClientIdentification
     private devicePrivateKey: KeyObject
     /** Device metadata extracted from the client id blob */

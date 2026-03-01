@@ -1,6 +1,7 @@
 {
     "name": "widevine",
     "version": "1.0.4",
+    "type": "module",
     "description": "NodeJS Widevine Client",
     "keywords": [
         "widevine"
@@ -20,21 +21,23 @@
         "lint": "eslint --ext ts ./src --quiet",
         "prettier:check": "prettier --check .",
         "prettier:fix": "prettier --write .",
-        "build": "tsc -p tsconfig.esm.json && tsc -p tsconfig.cjs.json"
+        "build": "tsdown",
+        "tests": "cd tests && bun req.ts && bun req_wvd.ts"
     },
-    "main": "dist/cjs/index.js",
-    "module": "dist/esm/index.js",
-    "types": "dist/esm/index.d.ts",
+    "main": "./dist/index.cjs",
+    "module": "./dist/index.mjs",
+    "types": "./dist/index.d.mts",
     "exports": {
         ".": {
-            "import": "./dist/esm/index.js",
-            "require": "./dist/cjs/index.js",
-            "types": "./dist/esm/index.d.ts"
+            "import": "./dist/index.mjs",
+            "require": "./dist/index.cjs",
+            "types": "./dist/index.d.mts"
         }
     },
     "files": [
         "dist"
     ],
+    "sideEffects": false,
     "devDependencies": {
         "@bufbuild/buf": "^1.66.0",
         "@bufbuild/protoc-gen-es": "^2.11.0",
@@ -48,6 +51,7 @@
         "jiti": "^2.6.1",
         "prettier": "^3.8.1",
         "ts-node": "^10.9.2",
+        "tsdown": "^0.21.0-beta.2",
         "typescript": "^5.9.3",
         "typescript-eslint": "^8.56.1"
     },

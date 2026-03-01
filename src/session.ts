@@ -5,7 +5,7 @@ import { COMMON_SERVICE_CERTIFICATE, SERVICE_CERTIFICATE_CHALLENGE, WIDEVINE_ROO
 import * as protocol from './license_protocol_pb'
 import type { KeyContainer } from './types'
 
-export default class Session {
+export class Session {
     private identifierBlob: protocol.ClientIdentification
     private devicePrivateKey: KeyObject
     private pssh: Buffer
