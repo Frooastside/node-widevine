@@ -1,6 +1,6 @@
 {
     "name": "widevine",
-    "version": "1.0.4",
+    "version": "1.0.5",
     "type": "module",
     "description": "NodeJS Widevine Client",
     "keywords": [
@@ -47,7 +47,7 @@
         "dotenv": "^17.3.1",
         "eslint": "^10.0.2",
         "eslint-config-prettier": "^10.1.8",
-        "globals": "^17.3.0",
+        "globals": "^17.4.0",
         "jiti": "^2.6.1",
         "prettier": "^3.8.1",
         "ts-node": "^10.9.2",
