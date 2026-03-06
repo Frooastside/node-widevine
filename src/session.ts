@@ -22,8 +22,10 @@ export class Session {
         switch (device_type) {
             case 2:
                 this.android = true
+                break
             default:
                 this.android = false
+                break
         }
     }
 
