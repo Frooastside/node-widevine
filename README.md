@@ -54,14 +54,14 @@ yarn add widevine
 
 ```typescript
 import { readFileSync } from 'fs'
-import { LicenseType, Widevine } from 'widevine'
+import { DeviceType, LicenseType, Widevine } from 'widevine'
 
 // Read cdm files
 const identifierBlob = readFileSync('./device_client_id_blob')
 const privateKey = readFileSync('./device_private_key')
 
 // Initialize Widevine client
-const device = Widevine.init(identifierBlob, privateKey)
+const device = Widevine.init(identifierBlob, privateKey, DeviceType.ANDROID)
 
 // Get Device info
 console.log(device.info)

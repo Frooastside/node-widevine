@@ -3,6 +3,7 @@ import { KeyObject, createPrivateKey } from 'crypto'
 import * as protocol from './license_protocol_pb'
 import PYWIDEVINE_DEVICE from './pywidevine/device'
 import { Session } from './session'
+import { DeviceType } from './types'
 import type { ContentDecryptionModule, KeyContainer, WidevineInfo } from './types'
 
 export class Widevine {
@@ -22,10 +23,11 @@ export class Widevine {
      *
      * @param identifierBlob The Widevine device client ID blob
      * @param privateKey The private key associated with the device client ID blob
+     * @param device_type Device type (CHROME, ANDROID) (Default: CHROME)
      * @returns A fully initialized Widevine instance
      * @throws If the device client ID blob cannot be parsed or if the private key does not match
      */
-    static init(identifierBlob: Buffer, privateKey: Buffer) {
+    static init(identifierBlob: Buffer, privateKey: Buffer, device_type?: DeviceType) {
         // Parse Client Blob
         const deviceIdentifierBlob = fromBinary(protocol.ClientIdentificationSchema, identifierBlob)
 
@@ -39,7 +41,8 @@ export class Widevine {
 
         const info: WidevineInfo = {
             client_info: {},
-            system_id: drmCertificate.systemId
+            system_id: drmCertificate.systemId,
+            device_type: device_type ?? 1
         }
         for (const ci of deviceIdentifierBlob.clientInfo) {
             info.client_info[ci.name] = ci.value
@@ -75,6 +78,7 @@ export class Widevine {
         const info: WidevineInfo = {
             client_info: {},
             system_id: drmCertificate.systemId,
+            device_type: device.device.device_type,
             device_version: device.device.version,
             security_level: device.device.security_level
         }
@@ -98,10 +102,11 @@ export class Widevine {
      * @param android Whether to use the Android request ID format (true) or the generic 16-byte format (false - default)
      * @returns A new Session instance bound to this Widevine client
      */
-    public createSession(pssh: Buffer, licenseType: protocol.LicenseType, android: boolean = false) {
-        return new Session(this.identifierBlob, this.devicePrivateKey, pssh, licenseType, android)
+    public createSession(pssh: Buffer, licenseType: protocol.LicenseType) {
+        return new Session(this.identifierBlob, this.devicePrivateKey, pssh, licenseType, this.info.device_type)
     }
 }
 
 export const LicenseType = protocol.LicenseType
+export { DeviceType }
 export type { Session, ContentDecryptionModule, KeyContainer }

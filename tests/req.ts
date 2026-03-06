@@ -1,4 +1,4 @@
-import { LicenseType, Widevine } from '../dist/index.cjs'
+import { DeviceType, LicenseType, Widevine } from '../dist/index.cjs'
 import { readFileSync } from 'fs'
 import { performance } from 'perf_hooks'
 
@@ -13,7 +13,7 @@ const licenseUrl = 'https://cwip-shaka-proxy.appspot.com/no_auth'
 // DEVICE INIT
 // ----------------------------
 let t0 = performance.now()
-const device = Widevine.init(identifierBlob, privateKey)
+const device = Widevine.init(identifierBlob, privateKey, DeviceType.ANDROID)
 let t1 = performance.now()
 
 console.log(device.info)

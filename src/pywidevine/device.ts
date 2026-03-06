@@ -17,7 +17,9 @@ export default class PYWIDEVINE_DEVICE {
         offset += 1
         if (version > 2 || version < 1) throw new Error(`Invalid version, not a WVD file: version ${version}`)
         // Check device type
-        // const type = buf.readInt8(offset) as 1 | 2
+        // CHROME = 1, ANDROID = 2
+        const device_type = buf.readInt8(offset) as 1 | 2
+        if (device_type > 2 || device_type < 1) throw new Error(`Invalid device type, not a WVD file: device type ${device_type}`)
         offset += 1
         // Check device security level
         const security_level = buf.readInt8(offset) as 1 | 2 | 3
@@ -41,6 +43,7 @@ export default class PYWIDEVINE_DEVICE {
 
         return new PYWIDEVINE_DEVICE({
             version: version,
+            device_type: device_type,
             security_level: security_level,
             client_id: client_id,
             private_key: private_key

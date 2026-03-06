@@ -3,7 +3,7 @@ import crypto, { KeyObject, randomBytes } from 'crypto'
 import AES_CMAC from './cmac'
 import { COMMON_SERVICE_CERTIFICATE, SERVICE_CERTIFICATE_CHALLENGE, WIDEVINE_ROOT_PUBLIC_KEY, WIDEVINE_SYSTEM_ID } from './consts'
 import * as protocol from './license_protocol_pb'
-import type { KeyContainer } from './types'
+import type { DeviceType, KeyContainer } from './types'
 
 export class Session {
     private identifierBlob: protocol.ClientIdentification
@@ -14,12 +14,17 @@ export class Session {
     private rawLicenseRequest?: Buffer
     private serviceCertificate?: protocol.SignedDrmCertificate
 
-    constructor(identifierBlob: protocol.ClientIdentification, devicePrivateKey: KeyObject, pssh: Buffer, licenseType: protocol.LicenseType, android: boolean = false) {
+    constructor(identifierBlob: protocol.ClientIdentification, devicePrivateKey: KeyObject, pssh: Buffer, licenseType: protocol.LicenseType, device_type: DeviceType) {
         this.identifierBlob = identifierBlob
         this.devicePrivateKey = devicePrivateKey
         this.pssh = pssh
         this.licenseType = licenseType
-        this.android = android
+        switch (device_type) {
+            case 2:
+                this.android = true
+            default:
+                this.android = false
+        }
     }
 
     // ============================================================================
