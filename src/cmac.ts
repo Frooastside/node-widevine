@@ -1,7 +1,6 @@
 import crypto from 'crypto'
 
 export default class AES_CMAC {
-    private readonly BLOCK_SIZE = 16
     private readonly Rb = Buffer.from([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x87])
     private readonly ZERO = Buffer.alloc(16)
 
