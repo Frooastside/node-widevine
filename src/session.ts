@@ -91,6 +91,26 @@ export class Session {
     // ============================================================================
 
     /**
+     * Extracts the Widevine payload from a PSSH box or returns the raw payload.
+     *
+     * @param payload The input buffer containing either a full PSSH box or a raw Widevine payload
+     * @returns The extracted Widevine payload buffer
+     */
+    private extractWidevinePayload(payload: Buffer): Buffer {
+        if (payload.length >= 8 && payload.subarray(4, 8).toString('ascii') === 'pssh') {
+            if (!payload.subarray(12, 28).equals(Buffer.from(WIDEVINE_SYSTEM_ID))) throw new Error('PSSH box does not belong to the Widevine system')
+
+            // Parse PSSH for validation
+            const pssh = this.parsePSSH(payload.subarray(32))
+            if (!pssh) throw new Error('Pssh is invalid')
+
+            return payload.subarray(32)
+        }
+
+        return payload
+    }
+
+    /**
      * Generates a Widevine license challenge for the current session.
      *
      * This method:
@@ -108,10 +128,8 @@ export class Session {
      */
     public generateChallenge(): Buffer<ArrayBuffer> {
         if (this.rawLicenseRequest) throw new Error('Session already consumed, open up a new one')
-        if (!this.pssh.subarray(12, 28).equals(Buffer.from(WIDEVINE_SYSTEM_ID))) throw new Error('The pssh is not an actuall pssh')
 
-        const pssh = this.parsePSSH(this.pssh)
-        if (!pssh) throw new Error('Pssh is invalid')
+        const psshPayload = this.extractWidevinePayload(this.pssh)
 
         const licenseRequest: protocol.LicenseRequest = create(protocol.LicenseRequestSchema, {
             type: protocol.LicenseRequest_RequestType.NEW,
@@ -119,7 +137,7 @@ export class Session {
                 contentIdVariant: {
                     case: 'widevinePsshData',
                     value: create(protocol.LicenseRequest_ContentIdentification_WidevinePsshDataSchema, {
-                        psshData: [this.pssh.subarray(32)],
+                        psshData: [psshPayload],
                         licenseType: this.licenseType,
                         requestId: this.android ? Buffer.from(`${randomBytes(8).toString('hex')}${'01'}${'00000000000000'}`) : randomBytes(16)
                     })
@@ -320,9 +338,9 @@ export class Session {
     // PSSH handling
     // ============================================================================
 
-    private parsePSSH(pssh: Buffer): protocol.WidevinePsshData | null {
+    private parsePSSH(payload: Buffer): protocol.WidevinePsshData | null {
         try {
-            return fromBinary(protocol.WidevinePsshDataSchema, pssh.subarray(32))
+            return fromBinary(protocol.WidevinePsshDataSchema, payload)
         } catch {
             return null
         }

@@ -1,6 +1,6 @@
 {
     "name": "widevine",
-    "version": "1.0.6",
+    "version": "1.0.7",
     "type": "module",
     "description": "NodeJS Widevine Client",
     "keywords": [
@@ -39,21 +39,21 @@
     ],
     "sideEffects": false,
     "devDependencies": {
-        "@bufbuild/buf": "^1.66.0",
+        "@bufbuild/buf": "^1.67.0",
         "@bufbuild/protoc-gen-es": "^2.11.0",
         "@eslint/js": "^10.0.1",
         "@trivago/prettier-plugin-sort-imports": "^6.0.2",
-        "@types/node": "^25.3.5",
-        "dotenv": "^17.3.1",
-        "eslint": "^10.0.2",
+        "@types/node": "^25.5.2",
+        "dotenv": "^17.4.1",
+        "eslint": "^10.2.0",
         "eslint-config-prettier": "^10.1.8",
         "globals": "^17.4.0",
         "jiti": "^2.6.1",
         "prettier": "^3.8.1",
         "ts-node": "^10.9.2",
-        "tsdown": "^0.21.0",
-        "typescript": "^5.9.3",
-        "typescript-eslint": "^8.56.1"
+        "tsdown": "^0.21.7",
+        "typescript": "^6.0.2",
+        "typescript-eslint": "^8.58.0"
     },
     "dependencies": {
         "@bufbuild/protobuf": "^2.11.0"
