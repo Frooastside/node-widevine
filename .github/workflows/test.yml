@@ -13,57 +13,56 @@ jobs:
     tsc:
         runs-on: ubuntu-latest
         steps:
-            - uses: actions/checkout@v2
+            - uses: actions/checkout@v4
             - uses: oven-sh/setup-bun@v2
               with:
                   bun-version: latest
-            - name: Set up Node.js
-              uses: actions/setup-node@v3
+            - uses: actions/setup-node@v4
               with:
                   node-version: 24
                   check-latest: true
             - run: bun i
             - run: bunx tsc
+
     eslint:
         needs: tsc
         runs-on: ubuntu-latest
         steps:
-            - uses: actions/checkout@v2
+            - uses: actions/checkout@v4
             - uses: oven-sh/setup-bun@v2
               with:
                   bun-version: latest
-            - name: Set up Node.js
-              uses: actions/setup-node@v3
+            - uses: actions/setup-node@v4
               with:
                   node-version: 24
                   check-latest: true
             - run: bun i
             - run: bun run lint
+
     prettier:
         needs: tsc
         runs-on: ubuntu-latest
         steps:
-            - uses: actions/checkout@v2
+            - uses: actions/checkout@v4
             - uses: oven-sh/setup-bun@v2
               with:
                   bun-version: latest
-            - name: Set up Node.js
-              uses: actions/setup-node@v4
+            - uses: actions/setup-node@v4
               with:
                   node-version: 24
                   check-latest: true
             - run: bun i
             - run: bun run prettier:check
+
     build-test:
         needs: [eslint, prettier, tsc]
         runs-on: ubuntu-latest
         steps:
-            - uses: actions/checkout@v2
+            - uses: actions/checkout@v4
             - uses: oven-sh/setup-bun@v2
               with:
                   bun-version: latest
-            - name: Set up Node.js
-              uses: actions/setup-node@v4
+            - uses: actions/setup-node@v4
               with:
                   node-version: 24
                   check-latest: true
